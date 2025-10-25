@@ -1,0 +1,5 @@
+-Edited diagram to look more like layered architecture
+-Outline of project setup in github
+-Follows structure of the architecture diagram
+-Login is setup and connected to database
+-Next step is to connect homepage and login with user sessions

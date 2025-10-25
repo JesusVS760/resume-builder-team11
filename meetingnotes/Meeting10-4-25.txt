@@ -1,0 +1,4 @@
+-We can separate the code into different modules to make it easier to debug
+-Not only job seekers could use it but schools and universities could teach students how to use it to help them in their careers
+-We will need to use APIs for login verification most likely and maybe for the parsing and tailoring logic
+-User can export their resume in pdf or docx

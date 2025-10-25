@@ -1,0 +1,3 @@
+-Our project isn't that complex but it isn't that simple
+-We need to start learning Java on our own since Java isn't our main language
+-It's good to ask for help since we are all learning Java and we won't know everything

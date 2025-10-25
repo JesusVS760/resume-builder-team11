@@ -1,0 +1,4 @@
+-User should also be able to edit their resume
+-An Admin can manage the user's accounts
+-Signing in with oAuth will have to be a seperate process most likely a seperate table in database
+-User can save their resume in the software

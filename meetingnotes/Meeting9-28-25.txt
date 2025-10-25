@@ -1,0 +1,3 @@
+-For our project the user should be able to drag and drop their resume for ease of use
+-Maybe for the job description the user can also just copy and paste it as that might be easier in some scenarios
+-The logic for tailoring the resume will take the longest most likely

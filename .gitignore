@@ -4,12 +4,9 @@ build/
 .DS_Store
 .vscode/
 .idea/
-<<<<<<< HEAD
-database/database.db
-.en
-=======
 database/*.db
 out/
 *.iml
->>>>>>> 8483c484acd4b9eb3bae3635e3fa57b2876afbd8
 .env
+*.txt
+!meetingnotes/*.txt

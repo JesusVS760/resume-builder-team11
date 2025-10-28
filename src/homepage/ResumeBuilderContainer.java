@@ -1,8 +1,10 @@
 package homepage;
 
+import ui.LandingPanel;
+import ui.UploadPanel;
+
 import javax.swing.*;
 import java.awt.*;
-import java.util.Objects;
 
 public class ResumeBuilderContainer extends JFrame {
 
@@ -75,12 +77,12 @@ public class ResumeBuilderContainer extends JFrame {
             java.net.URL url = null;
 
             // First try: from classpath (build directory)
-            url = ResumeBuilderContainer.class.getResource("/homepage/icons/profilePic.png");
+            url = ResumeBuilderContainer.class.getResource("/homepage/images/profilePic.png");
 
             // Second try: from src directory (development)
             if (url == null) {
                 try {
-                    java.io.File file = new java.io.File("src/homepage/icons/profilePic.png");
+                    java.io.File file = new java.io.File("src/homepage/images/profilePic.png");
                     if (file.exists()) {
                         url = file.toURI().toURL();
                     }

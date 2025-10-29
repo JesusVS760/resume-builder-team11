@@ -19,7 +19,7 @@ public class LoginFrame extends JFrame {
     private JLabel passwordLabel;
     
     // Colors
-    private static final Color NAVY_BLUE = new Color(25, 25, 112);
+    private static final Color NAVY_BLUE = new Color(0x1f2937);
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
     private static final Color WHITE = Color.WHITE;
     
@@ -48,7 +48,6 @@ public class LoginFrame extends JFrame {
     
     private void initializeFrame() {
         setTitle(" Tailored Resume Builder - Login");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(400, 500);
         setLocationRelativeTo(null);
         setResizable(false);

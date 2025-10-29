@@ -20,7 +20,7 @@ public class SignupFrame extends JFrame {
     private JLabel confirmPasswordLabel;
     
     // Colors - macOS compatible
-    private static final Color NAVY_BLUE = new Color(25, 25, 112);
+    private static final Color NAVY_BLUE = new Color(0x1f2937);
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
     private static final Color WHITE = Color.WHITE;
     private static final Color DARK_GRAY = Color.DARK_GRAY;
@@ -50,8 +50,7 @@ public class SignupFrame extends JFrame {
     
     private void initializeFrame() {
         setTitle("Resume Builder - Sign Up");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(400, 600);
+        setSize(400, 500);
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setBackground(NAVY_BLUE);

@@ -12,11 +12,14 @@ public class ResumeBuilderContainer extends JFrame {
     private static final Color NEW_BLUE = new Color(0x374151); // pick your shade
     private static final Color DARK_TEXT  = Color.BLACK;
 
+    private final java.util.List<String> CARD_ORDER =
+            java.util.List.of("HOME", "BUILD", "SAVED", "FAQ", "SETTINGS", "PROFILE");
+
     private JPanel rootPanel;
     private JPanel navigationPanel;
 
     // Right Side
-    private JPanel contentPanel;
+    private ui.widgets.AnimatedCards contentPanel;
     private JPanel buildResumePanel;
     private JPanel savedResumesPanel;
     private JPanel faqPanel;
@@ -36,8 +39,6 @@ public class ResumeBuilderContainer extends JFrame {
     private JLabel emailValueLabel;
     private JLabel nameValueLabel;
     private JButton logoutButton;
-
-    private CardLayout cards;
 
     public ResumeBuilderContainer() {
         super("Resume Builder");
@@ -61,8 +62,7 @@ public class ResumeBuilderContainer extends JFrame {
         buildResumePanel.add(new UploadPanel(), BorderLayout.CENTER);
 
         // wiring
-        cards = (CardLayout) contentPanel.getLayout();
-        showCard("HOME");
+        contentPanel.instantShow("HOME");
 
         // profile icon
         ImageIcon profileIcon = loadScaledIcon("/homepage/images/profilePic.png",
@@ -73,19 +73,21 @@ public class ResumeBuilderContainer extends JFrame {
         updateAuthUI();
 
         // navigation
-        resumeBuilderButton.addActionListener(e -> showCard("HOME"));
-        buildResumeButton.addActionListener(e -> showCard("BUILD"));
-        savedResumesButton.addActionListener(e -> showCard("SAVED"));
-        FAQButton.addActionListener(e -> showCard("FAQ"));
-        settingsButton.addActionListener(e -> showCard("SETTINGS"));
+        resumeBuilderButton.addActionListener(e -> go("HOME"));
+        buildResumeButton.addActionListener(e -> go("BUILD"));
+        savedResumesButton.addActionListener(e -> go("SAVED"));
+        FAQButton.addActionListener(e -> go("FAQ"));
+        settingsButton.addActionListener(e -> go("SETTINGS"));
         profileButton.addActionListener(e -> {
             if (utils.Constants.Session.isLoggedIn()) {
                 updateProfilePanel();
-                showCard("PROFILE");
+                updateAuthUI();
+                go("PROFILE");                 // use animated nav
             } else {
                 new ui.LoginFrame().setVisible(true);
             }
         });
+
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1280, 720);
@@ -97,7 +99,7 @@ public class ResumeBuilderContainer extends JFrame {
                 if (utils.Constants.Session.justLoggedIn()) {
                     updateProfilePanel();
                     updateAuthUI();
-                    showCard("PROFILE");
+                    go("PROFILE");
                 }
             }
             @Override public void windowLostFocus(java.awt.event.WindowEvent e) { }
@@ -111,10 +113,6 @@ public class ResumeBuilderContainer extends JFrame {
             b.setForeground(Color.WHITE);
             b.setFocusPainted(false);
         }
-    }
-
-    private void showCard(String name) {
-        cards.show(contentPanel, name);
     }
 
     private void setCardBackgrounds(Color bg) {
@@ -168,7 +166,7 @@ public class ResumeBuilderContainer extends JFrame {
         navigationPanel.add(profileButton);
 
         // center cards
-        contentPanel = new JPanel(new CardLayout());
+        contentPanel = new ui.widgets.AnimatedCards();
         rootPanel.add(contentPanel, BorderLayout.CENTER);
 
         // cards (simple placeholders; replaced in ctor)
@@ -179,12 +177,12 @@ public class ResumeBuilderContainer extends JFrame {
         settingsPanel     = createCardPanel("Settings");
         profilePanel      = createProfilePanel();
 
-        contentPanel.add(homePanel, "HOME");
-        contentPanel.add(buildResumePanel, "BUILD");
-        contentPanel.add(savedResumesPanel, "SAVED");
-        contentPanel.add(faqPanel, "FAQ");
-        contentPanel.add(settingsPanel, "SETTINGS");
-        contentPanel.add(profilePanel, "PROFILE");
+        contentPanel.addCard("HOME",     homePanel);
+        contentPanel.addCard("BUILD",    buildResumePanel);
+        contentPanel.addCard("SAVED",    savedResumesPanel);
+        contentPanel.addCard("FAQ",      faqPanel);
+        contentPanel.addCard("SETTINGS", settingsPanel);
+        contentPanel.addCard("PROFILE",  profilePanel);
     }
 
     private void updateAuthUI() {
@@ -241,7 +239,7 @@ public class ResumeBuilderContainer extends JFrame {
                     "Logout", JOptionPane.INFORMATION_MESSAGE);
             updateProfilePanel();
             updateAuthUI();
-            showCard("HOME");
+            contentPanel.instantShow("HOME");
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -266,6 +264,23 @@ public class ResumeBuilderContainer extends JFrame {
             logoutButton.setVisible(false);
         }
     }
+
+    private void go(String target) {
+        if (!contentPanel.isShowing() || contentPanel.getWidth() <= 0 || contentPanel.getHeight() <= 0) {
+            SwingUtilities.invokeLater(() -> contentPanel.slideTo(target, 0));
+            return;
+        }
+        String current = contentPanel.getCurrentCard();
+        if (current == null || current.equals(target)) {
+            contentPanel.instantShow(target);
+            return;
+        }
+        int curIdx = CARD_ORDER.indexOf(current);
+        int tgtIdx = CARD_ORDER.indexOf(target);
+        int dir = Integer.compare(tgtIdx, curIdx);
+        contentPanel.slideTo(target, dir);
+    }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new ResumeBuilderContainer().setVisible(true));

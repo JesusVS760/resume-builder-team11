@@ -2,6 +2,7 @@ package homepage;
 
 import ui.LandingPanel;
 import ui.UploadPanel;
+import ui.widgets.HoverScaleButton;
 
 import javax.swing.*;
 import java.awt.*;
@@ -206,12 +207,14 @@ public class ResumeBuilderContainer extends JFrame {
         rootPanel.add(navigationPanel, BorderLayout.WEST);
 
         // Create navigation buttons
-        resumeBuilderButton = new JButton("Home");
-        buildResumeButton = new JButton("Build Resume");
-        savedResumesButton = new JButton("Saved Resumes");
-        FAQButton = new JButton("FAQ");
-        settingsButton = new JButton("Settings");
-        profileButton = new JButton("Profile");
+        // import ui.widgets.HoverScaleButton;
+        resumeBuilderButton = new HoverScaleButton("Home");
+        buildResumeButton   = new HoverScaleButton("Build Resume");
+        savedResumesButton  = new HoverScaleButton("Saved Resumes");
+        FAQButton           = new HoverScaleButton("FAQ");
+        settingsButton      = new HoverScaleButton("Settings");
+        profileButton       = new HoverScaleButton("Profile");
+
 
         // Add buttons to navigation panel
         navigationPanel.add(resumeBuilderButton);

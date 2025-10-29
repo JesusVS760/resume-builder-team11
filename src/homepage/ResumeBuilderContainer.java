@@ -70,6 +70,7 @@ public class ResumeBuilderContainer extends JFrame {
         if (profileIcon != null) profileButton.setIcon(profileIcon);
 
         styleNavButtons();
+        updateAuthUI();
 
         // navigation
         resumeBuilderButton.addActionListener(e -> showCard("HOME"));
@@ -95,6 +96,7 @@ public class ResumeBuilderContainer extends JFrame {
             @Override public void windowGainedFocus(java.awt.event.WindowEvent e) {
                 if (utils.Constants.Session.justLoggedIn()) {
                     updateProfilePanel();
+                    updateAuthUI();
                     showCard("PROFILE");
                 }
             }
@@ -156,7 +158,7 @@ public class ResumeBuilderContainer extends JFrame {
         savedResumesButton  = new HoverScaleButton("Saved Resumes");
         FAQButton           = new HoverScaleButton("FAQ");
         settingsButton      = new HoverScaleButton("Settings");
-        profileButton       = new HoverScaleButton("Profile");
+        profileButton       = new HoverScaleButton("Login");
 
         navigationPanel.add(resumeBuilderButton);
         navigationPanel.add(buildResumeButton);
@@ -183,6 +185,11 @@ public class ResumeBuilderContainer extends JFrame {
         contentPanel.add(faqPanel, "FAQ");
         contentPanel.add(settingsPanel, "SETTINGS");
         contentPanel.add(profilePanel, "PROFILE");
+    }
+
+    private void updateAuthUI() {
+        boolean loggedIn = utils.Constants.Session.isLoggedIn();
+        profileButton.setText(loggedIn ? "Profile" : "Login");
     }
 
     private JPanel createCardPanel(String text) {
@@ -233,6 +240,8 @@ public class ResumeBuilderContainer extends JFrame {
             JOptionPane.showMessageDialog(this, "You have been logged out successfully.",
                     "Logout", JOptionPane.INFORMATION_MESSAGE);
             updateProfilePanel();
+            updateAuthUI();
+            showCard("HOME");
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout());

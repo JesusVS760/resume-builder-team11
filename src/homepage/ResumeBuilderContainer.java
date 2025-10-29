@@ -9,6 +9,9 @@ import java.awt.*;
 
 public class ResumeBuilderContainer extends JFrame {
 
+    private static final Color NEW_BLUE = new Color(0x374151); // pick your shade
+    private static final Color DARK_TEXT  = Color.BLACK;
+
     private JPanel rootPanel;
     private JPanel navigationPanel;
 
@@ -36,79 +39,39 @@ public class ResumeBuilderContainer extends JFrame {
 
     private CardLayout cards;
 
-    public ResumeBuilderContainer () {
+    public ResumeBuilderContainer() {
         super("Resume Builder");
 
-        // Set look and feel for macOS compatibility
-        try {
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-        } catch (Exception e) {
-            // Use default if setting fails
-        }
+        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignored) {}
 
-        $$$setupUI$$$();
-
+        $$$setupUI$$$();                // build UI structure
         setContentPane(rootPanel);
         setResizable(false);
 
-        Color CARD_BG = Color.GRAY;
-        setCardBackgrounds(CARD_BG);
+        // consistent card background
+        setCardBackgrounds(Color.GRAY);
 
+        // plug real content into cards
         homePanel.setLayout(new BorderLayout());
         homePanel.removeAll();
         homePanel.add(new LandingPanel("src/homepage/images/landing_hero.png"), BorderLayout.CENTER);
-        homePanel.revalidate();
-        homePanel.repaint();
 
         buildResumePanel.setLayout(new BorderLayout());
         buildResumePanel.removeAll();
         buildResumePanel.add(new UploadPanel(), BorderLayout.CENTER);
-        // refreshes the card
-        buildResumePanel.revalidate();
-        buildResumePanel.repaint();
 
-        contentPanel.revalidate();
-        contentPanel.repaint();
-
-        this.cards = (CardLayout) contentPanel.getLayout();
+        // wiring
+        cards = (CardLayout) contentPanel.getLayout();
         showCard("HOME");
 
-        try {
-            // Try multiple possible paths for the profile icon
-            java.net.URL url = null;
-
-            // First try: from classpath (build directory)
-            url = ResumeBuilderContainer.class.getResource("/homepage/images/profilePic.png");
-
-            // Second try: from src directory (development)
-            if (url == null) {
-                try {
-                    java.io.File file = new java.io.File("src/homepage/images/profilePic.png");
-                    if (file.exists()) {
-                        url = file.toURI().toURL();
-                    }
-                } catch (Exception e) {
-                    // Ignore file access issues
-                }
-            }
-
-            if (url != null) {
-                var base = new ImageIcon(url).getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
-                profileButton.setIcon(new ImageIcon(base));
-            } else {
-                System.out.println("Profile icon not found at any location");
-            }
-        } catch (Exception e) {
-            System.out.println("Error loading profile icon: " + e.getMessage());
-            // Profile icon not found, continue without it
-        }
+        // profile icon
+        ImageIcon profileIcon = loadScaledIcon("/homepage/images/profilePic.png",
+                "src/homepage/images/profilePic.png", 24, 24);
+        if (profileIcon != null) profileButton.setIcon(profileIcon);
 
         styleNavButtons();
 
-        if (!(contentPanel.getLayout() instanceof CardLayout)) {
-            contentPanel.setLayout(new CardLayout());
-        }
-
+        // navigation
         resumeBuilderButton.addActionListener(e -> showCard("HOME"));
         buildResumeButton.addActionListener(e -> showCard("BUILD"));
         savedResumesButton.addActionListener(e -> showCard("SAVED"));
@@ -116,98 +79,78 @@ public class ResumeBuilderContainer extends JFrame {
         settingsButton.addActionListener(e -> showCard("SETTINGS"));
         profileButton.addActionListener(e -> {
             if (utils.Constants.Session.isLoggedIn()) {
-                // User is logged in, show profile page with user info
                 updateProfilePanel();
                 showCard("PROFILE");
             } else {
-                // User not logged in, show login frame
                 new ui.LoginFrame().setVisible(true);
             }
         });
-
-        navigationPanel.setBackground(new Color(0x1f2937));
-        navigationPanel.setOpaque(true);
-        navigationPanel.setPreferredSize(new Dimension(220, 0));
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1280, 720);
         setLocationRelativeTo(null);
 
-        // Add window focus listener to check for login state changes
+        // focus hook to auto-open profile after login
         addWindowFocusListener(new java.awt.event.WindowFocusListener() {
-            @Override
-            public void windowGainedFocus(java.awt.event.WindowEvent e) {
-                // Check if user just logged in
+            @Override public void windowGainedFocus(java.awt.event.WindowEvent e) {
                 if (utils.Constants.Session.justLoggedIn()) {
-                    // Automatically show profile panel
                     updateProfilePanel();
                     showCard("PROFILE");
                 }
             }
-
-            @Override
-            public void windowLostFocus(java.awt.event.WindowEvent e) {
-                // Not needed
-            }
+            @Override public void windowLostFocus(java.awt.event.WindowEvent e) { }
         });
     }
 
     private void styleNavButtons() {
-        JButton[] nav = {
-                resumeBuilderButton, buildResumeButton, savedResumesButton, FAQButton, settingsButton, profileButton
-        };
-        for (JButton b : nav) {
+        for (JButton b : new JButton[]{ resumeBuilderButton, buildResumeButton, savedResumesButton, FAQButton, settingsButton, profileButton }) {
             if (b == null) continue;
+            b.setBackground(NEW_BLUE);
             b.setForeground(Color.WHITE);
-            b.setBackground(new Color(0x374151));
-            b.setOpaque(true);
             b.setFocusPainted(false);
-            b.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
         }
     }
 
-    private void addCard(JPanel panel, String name, String placeholderTitle) {
-        if (panel == null) {
-            panel = new JPanel(new BorderLayout());
-            panel.add(new JLabel(placeholderTitle, SwingConstants.CENTER), BorderLayout.CENTER);
-        }
-        contentPanel.add(panel, name);
-    }
-
-    private void showCard(String name){
+    private void showCard(String name) {
         cards.show(contentPanel, name);
-        contentPanel.revalidate();
-        contentPanel.repaint();
     }
 
     private void setCardBackgrounds(Color bg) {
-        JPanel[] cardsArr = {
-                homePanel, buildResumePanel, savedResumesPanel,
-                faqPanel, settingsPanel, profilePanel
-        };
+        JPanel[] cardsArr = { homePanel, buildResumePanel, savedResumesPanel, faqPanel, settingsPanel, profilePanel };
         for (JPanel p : cardsArr) {
-            if (p == null) continue;
-            p.setBackground(bg);
-            p.setOpaque(true);
+            if (p != null) { p.setBackground(bg); p.setOpaque(true); }
         }
     }
 
-    // IntelliJ GUI Designer initialization method (recreated with standard Swing)
+    // --- Helpers ---
+    private ImageIcon loadScaledIcon(String classpath, String fileFallback, int w, int h) {
+        try {
+            java.net.URL url = ResumeBuilderContainer.class.getResource(classpath);
+            if (url == null) {
+                java.io.File f = new java.io.File(fileFallback);
+                if (f.exists()) url = f.toURI().toURL();
+            }
+            if (url == null) return null;
+            Image img = new ImageIcon(url).getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+            return new ImageIcon(img);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ---------- UI build ----------
     private void $$$setupUI$$$() {
-        rootPanel = new JPanel();
-        rootPanel.setLayout(new BorderLayout(0, 0));
+        rootPanel = new JPanel(new BorderLayout());
         rootPanel.setPreferredSize(new Dimension(795, 538));
 
-        // Create navigation panel (west side)
-        navigationPanel = new JPanel();
-        navigationPanel.setLayout(new GridLayout(6, 1, 0, 0));
+        // left nav
+        navigationPanel = new JPanel(new GridLayout(6, 1, 0, 12));
         navigationPanel.setBackground(new Color(0x1f2937));
         navigationPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         navigationPanel.setPreferredSize(new Dimension(220, 0));
         rootPanel.add(navigationPanel, BorderLayout.WEST);
 
-        // Create navigation buttons
-        // import ui.widgets.HoverScaleButton;
+        // nav buttons (with hover scale)
         resumeBuilderButton = new HoverScaleButton("Home");
         buildResumeButton   = new HoverScaleButton("Build Resume");
         savedResumesButton  = new HoverScaleButton("Saved Resumes");
@@ -215,8 +158,6 @@ public class ResumeBuilderContainer extends JFrame {
         settingsButton      = new HoverScaleButton("Settings");
         profileButton       = new HoverScaleButton("Profile");
 
-
-        // Add buttons to navigation panel
         navigationPanel.add(resumeBuilderButton);
         navigationPanel.add(buildResumeButton);
         navigationPanel.add(savedResumesButton);
@@ -224,39 +165,33 @@ public class ResumeBuilderContainer extends JFrame {
         navigationPanel.add(settingsButton);
         navigationPanel.add(profileButton);
 
-        // Create content panel (center) with CardLayout
-        contentPanel = new JPanel();
-        contentPanel.setLayout(new CardLayout(0, 0));
+        // center cards
+        contentPanel = new JPanel(new CardLayout());
         rootPanel.add(contentPanel, BorderLayout.CENTER);
 
-        // Create card panels
-        homePanel = createCardPanel("Landing Page");
-        buildResumePanel = createCardPanel("Drag and Drop");
+        // cards (simple placeholders; replaced in ctor)
+        homePanel         = createCardPanel("Landing Page");
+        buildResumePanel  = createCardPanel("Drag and Drop");
         savedResumesPanel = createCardPanel("Your saved resumes");
-        faqPanel = createCardPanel("This is where questions will be answered");
-        settingsPanel = createCardPanel("Settings");
-        profilePanel = createProfilePanel();
+        faqPanel          = createCardPanel("This is where questions will be answered");
+        settingsPanel     = createCardPanel("Settings");
+        profilePanel      = createProfilePanel();
 
-        // Add panels to card layout
         contentPanel.add(homePanel, "HOME");
         contentPanel.add(buildResumePanel, "BUILD");
         contentPanel.add(savedResumesPanel, "SAVED");
         contentPanel.add(faqPanel, "FAQ");
         contentPanel.add(settingsPanel, "SETTINGS");
         contentPanel.add(profilePanel, "PROFILE");
-
     }
 
     private JPanel createCardPanel(String text) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.GRAY);
-
         JLabel label = new JLabel(text, SwingConstants.CENTER);
         label.setForeground(Color.WHITE);
-
         panel.add(label, BorderLayout.NORTH);
-        panel.add(Box.createVerticalGlue(), BorderLayout.CENTER); // Vertical spacer
-
+        panel.add(Box.createVerticalGlue(), BorderLayout.CENTER);
         return panel;
     }
 
@@ -264,14 +199,13 @@ public class ResumeBuilderContainer extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.GRAY);
 
-        // Profile info panel
-        JPanel infoPanel = new JPanel(new GridLayout(3, 2, 10, 5));
-        infoPanel.setBackground(Color.GRAY);
-        infoPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
         JLabel titleLabel = new JLabel("User Profile", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
+
+        JPanel infoPanel = new JPanel(new GridLayout(3, 2, 10, 5));
+        infoPanel.setBackground(Color.GRAY);
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JLabel emailLabel = new JLabel("Email:");
         emailLabel.setForeground(Color.WHITE);
@@ -283,25 +217,22 @@ public class ResumeBuilderContainer extends JFrame {
         nameValueLabel = new JLabel("Not logged in");
         nameValueLabel.setForeground(Color.WHITE);
 
-        infoPanel.add(emailLabel);
-        infoPanel.add(emailValueLabel);
-        infoPanel.add(nameLabel);
-        infoPanel.add(nameValueLabel);
+        infoPanel.add(emailLabel); infoPanel.add(emailValueLabel);
+        infoPanel.add(nameLabel);  infoPanel.add(nameValueLabel);
 
-        // Logout button
         logoutButton = new JButton("Logout");
         logoutButton.setBackground(Color.RED);
         logoutButton.setForeground(Color.WHITE);
-        logoutButton.setOpaque(true);  // Ensure background is painted on macOS
+        logoutButton.setOpaque(true);
         logoutButton.setFocusPainted(false);
-        logoutButton.setBorderPainted(false);  // Remove default border
+        logoutButton.setBorderPainted(false);
         logoutButton.setFont(new Font("Arial", Font.BOLD, 12));
-        logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));  // Add custom padding
+        logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         logoutButton.addActionListener(e -> {
             utils.Constants.Session.logout();
             JOptionPane.showMessageDialog(this, "You have been logged out successfully.",
-                                        "Logout", JOptionPane.INFORMATION_MESSAGE);
-            updateProfilePanel(); // Update to show "Not logged in"
+                    "Logout", JOptionPane.INFORMATION_MESSAGE);
+            updateProfilePanel();
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -311,7 +242,6 @@ public class ResumeBuilderContainer extends JFrame {
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(infoPanel, BorderLayout.CENTER);
         panel.add(buttonPanel, BorderLayout.SOUTH);
-
         return panel;
     }
 

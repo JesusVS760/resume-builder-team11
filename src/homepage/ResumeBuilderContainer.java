@@ -10,19 +10,16 @@ import java.awt.*;
 public class ResumeBuilderContainer extends JFrame {
 
     private static final Color NEW_BLUE = new Color(0x374151); // pick your shade
-    private static final Color DARK_TEXT  = Color.BLACK;
 
     private final java.util.List<String> CARD_ORDER =
-            java.util.List.of("HOME", "BUILD", "SAVED", "FAQ", "SETTINGS", "PROFILE");
+            java.util.List.of("HOME", "BUILD", "SAVED", "SETTINGS", "PROFILE");
 
     private JPanel rootPanel;
-    private JPanel navigationPanel;
 
     // Right Side
     private ui.widgets.AnimatedCards contentPanel;
     private JPanel buildResumePanel;
     private JPanel savedResumesPanel;
-    private JPanel faqPanel;
     private JPanel settingsPanel;
     private JPanel profilePanel;
     private JPanel homePanel;
@@ -30,7 +27,6 @@ public class ResumeBuilderContainer extends JFrame {
     // Navigation Buttons
     private JButton buildResumeButton;
     private JButton savedResumesButton;
-    private JButton FAQButton;
     private JButton settingsButton;
     private JButton profileButton;
     private JButton resumeBuilderButton;
@@ -76,7 +72,6 @@ public class ResumeBuilderContainer extends JFrame {
         resumeBuilderButton.addActionListener(e -> go("HOME"));
         buildResumeButton.addActionListener(e -> go("BUILD"));
         savedResumesButton.addActionListener(e -> go("SAVED"));
-        FAQButton.addActionListener(e -> go("FAQ"));
         settingsButton.addActionListener(e -> go("SETTINGS"));
         profileButton.addActionListener(e -> {
             if (utils.Constants.Session.isLoggedIn()) {
@@ -107,7 +102,7 @@ public class ResumeBuilderContainer extends JFrame {
     }
 
     private void styleNavButtons() {
-        for (JButton b : new JButton[]{ resumeBuilderButton, buildResumeButton, savedResumesButton, FAQButton, settingsButton, profileButton }) {
+        for (JButton b : new JButton[]{ resumeBuilderButton, buildResumeButton, savedResumesButton, settingsButton, profileButton }) {
             if (b == null) continue;
             b.setBackground(NEW_BLUE);
             b.setForeground(Color.WHITE);
@@ -116,7 +111,7 @@ public class ResumeBuilderContainer extends JFrame {
     }
 
     private void setCardBackgrounds(Color bg) {
-        JPanel[] cardsArr = { homePanel, buildResumePanel, savedResumesPanel, faqPanel, settingsPanel, profilePanel };
+        JPanel[] cardsArr = { homePanel, buildResumePanel, savedResumesPanel, settingsPanel, profilePanel };
         for (JPanel p : cardsArr) {
             if (p != null) { p.setBackground(bg); p.setOpaque(true); }
         }
@@ -144,24 +139,22 @@ public class ResumeBuilderContainer extends JFrame {
         rootPanel.setPreferredSize(new Dimension(795, 538));
 
         // left nav
-        navigationPanel = new JPanel(new GridLayout(6, 1, 0, 12));
+        JPanel navigationPanel = new JPanel(new GridLayout(5, 1, 0, 12));
         navigationPanel.setBackground(new Color(0x1f2937));
         navigationPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         navigationPanel.setPreferredSize(new Dimension(220, 0));
         rootPanel.add(navigationPanel, BorderLayout.WEST);
 
-        // nav buttons (with hover scale)
+        // nav buttons
         resumeBuilderButton = new HoverScaleButton("Home");
         buildResumeButton   = new HoverScaleButton("Build Resume");
         savedResumesButton  = new HoverScaleButton("Saved Resumes");
-        FAQButton           = new HoverScaleButton("FAQ");
         settingsButton      = new HoverScaleButton("Settings");
         profileButton       = new HoverScaleButton("Login");
 
         navigationPanel.add(resumeBuilderButton);
         navigationPanel.add(buildResumeButton);
         navigationPanel.add(savedResumesButton);
-        navigationPanel.add(FAQButton);
         navigationPanel.add(settingsButton);
         navigationPanel.add(profileButton);
 
@@ -173,14 +166,12 @@ public class ResumeBuilderContainer extends JFrame {
         homePanel         = createCardPanel("Landing Page");
         buildResumePanel  = createCardPanel("Drag and Drop");
         savedResumesPanel = createCardPanel("Your saved resumes");
-        faqPanel          = createCardPanel("This is where questions will be answered");
         settingsPanel     = createCardPanel("Settings");
         profilePanel      = createProfilePanel();
 
         contentPanel.addCard("HOME",     homePanel);
         contentPanel.addCard("BUILD",    buildResumePanel);
         contentPanel.addCard("SAVED",    savedResumesPanel);
-        contentPanel.addCard("FAQ",      faqPanel);
         contentPanel.addCard("SETTINGS", settingsPanel);
         contentPanel.addCard("PROFILE",  profilePanel);
     }

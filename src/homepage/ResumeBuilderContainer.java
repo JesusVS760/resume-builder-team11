@@ -332,21 +332,16 @@ public class ResumeBuilderContainer extends JFrame {
     private void go(String target) {
         setActiveNav(target);
 
-        if (!contentPanel.isShowing() || contentPanel.getWidth() <= 0 || contentPanel.getHeight() <= 0) {
-            // If layout not ready yet, schedule a slide after first layout pass
-            SwingUtilities.invokeLater(() -> contentPanel.slideTo(target, 0));
-            return;
-        }
-
         String current = contentPanel.getCurrentCard();
-        if (current == null || current.equals(target)) {
+        if (current == null) {
             contentPanel.instantShow(target);
             return;
         }
+        if (current.equals(target)) return;
 
         int curIdx = CARD_ORDER.indexOf(current);
         int tgtIdx = CARD_ORDER.indexOf(target);
-        int dir = Integer.compare(tgtIdx, curIdx);
+        int dir = Integer.compare(tgtIdx, curIdx);   // +1 forward, -1 backward
         contentPanel.slideTo(target, dir);
     }
 

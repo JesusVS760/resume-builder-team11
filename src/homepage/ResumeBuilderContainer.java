@@ -11,6 +11,7 @@ public class ResumeBuilderContainer extends JFrame {
 
     private static final Color NEW_BLUE = new Color(0x374151); // pick your shade
 
+    private java.util.Map<String, HoverScaleButton> navButtons;
     private final java.util.List<String> CARD_ORDER =
             java.util.List.of("HOME", "BUILD", "SAVED", "SETTINGS", "PROFILE");
 
@@ -57,15 +58,14 @@ public class ResumeBuilderContainer extends JFrame {
         buildResumePanel.removeAll();
         buildResumePanel.add(new UploadPanel(), BorderLayout.CENTER);
 
-        // wiring
-        contentPanel.instantShow("HOME");
-
         // profile icon
         ImageIcon profileIcon = loadScaledIcon("/homepage/images/profilePic.png",
                 "src/homepage/images/profilePic.png", 24, 24);
         if (profileIcon != null) profileButton.setIcon(profileIcon);
 
+        contentPanel.instantShow("HOME");
         styleNavButtons();
+        setActiveNav("HOME");
         updateAuthUI();
 
         // navigation
@@ -109,6 +109,14 @@ public class ResumeBuilderContainer extends JFrame {
             b.setFocusPainted(false);
         }
     }
+
+    private void setActiveNav(String key) {
+        if (navButtons == null) return;
+        for (HoverScaleButton b : navButtons.values()) b.setSticky(false);
+        HoverScaleButton active = navButtons.get(key);
+        if (active != null) active.setSticky(true);
+    }
+
 
     private void setCardBackgrounds(Color bg) {
         JPanel[] cardsArr = { homePanel, buildResumePanel, savedResumesPanel, settingsPanel, profilePanel };
@@ -157,6 +165,13 @@ public class ResumeBuilderContainer extends JFrame {
         navigationPanel.add(savedResumesButton);
         navigationPanel.add(settingsButton);
         navigationPanel.add(profileButton);
+
+        navButtons = new java.util.LinkedHashMap<>();
+        navButtons.put("HOME",     (HoverScaleButton) resumeBuilderButton);
+        navButtons.put("BUILD",    (HoverScaleButton) buildResumeButton);
+        navButtons.put("SAVED",    (HoverScaleButton) savedResumesButton);
+        navButtons.put("SETTINGS", (HoverScaleButton) settingsButton);
+        navButtons.put("PROFILE",  (HoverScaleButton) profileButton);
 
         // center cards
         contentPanel = new ui.widgets.AnimatedCards();
@@ -257,6 +272,8 @@ public class ResumeBuilderContainer extends JFrame {
     }
 
     private void go(String target) {
+        setActiveNav(target);
+
         if (!contentPanel.isShowing() || contentPanel.getWidth() <= 0 || contentPanel.getHeight() <= 0) {
             SwingUtilities.invokeLater(() -> contentPanel.slideTo(target, 0));
             return;
@@ -271,6 +288,7 @@ public class ResumeBuilderContainer extends JFrame {
         int dir = Integer.compare(tgtIdx, curIdx);
         contentPanel.slideTo(target, dir);
     }
+
 
 
     public static void main(String[] args) {

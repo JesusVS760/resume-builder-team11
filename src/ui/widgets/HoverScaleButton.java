@@ -7,6 +7,7 @@ import java.awt.*;
 public class HoverScaleButton extends JButton {
     private float scale = 0.94f;
     private float target = 0.94f;
+    private boolean sticky = false;              // <— stays scaled up when true
     private final Timer anim;
 
     public HoverScaleButton(String text) {
@@ -32,16 +33,26 @@ public class HoverScaleButton extends JButton {
                 target = 1.00f; if (!anim.isRunning()) anim.start();
             }
             @Override public void mouseExited(java.awt.event.MouseEvent e) {
-                target = 0.94f; if (!anim.isRunning()) anim.start();
+                target = sticky ? 1.00f : 0.94f; if (!anim.isRunning()) anim.start();
             }
             @Override public void mousePressed(java.awt.event.MouseEvent e) {
                 target = 0.92f; if (!anim.isRunning()) anim.start(); // tactile press
             }
             @Override public void mouseReleased(java.awt.event.MouseEvent e) {
-                target = 1.00f; if (!anim.isRunning()) anim.start();
+                boolean inside = contains(e.getPoint());
+                target = sticky ? 1.00f : (inside ? 1.00f : 0.94f);
+                if (!anim.isRunning()) anim.start();
             }
         });
     }
+
+    /** Call this to pin/unpin the “scaled up” state */
+    public void setSticky(boolean on) {
+        sticky = on;
+        target = sticky ? 1.00f : 0.94f;
+        if (!anim.isRunning()) anim.start();
+    }
+    public boolean isSticky() { return sticky; }
 
     @Override public void updateUI() {
         super.updateUI();

@@ -1,24 +1,19 @@
 -- SQLite database schema
 
---Users table - handles both regular and OAuth authentication
+-- Regular users table - for email/password authentication
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id VARCHAR(20) PRIMARY KEY,  -- Format: U1, U2, U3...
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255),              -- NULL for OAuth-only users
     name VARCHAR(255),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    -- OAuth fields
-    oauth_provider VARCHAR(50),              -- 'google', 'github', NULL for regular users
-    oauth_id VARCHAR(255),                   -- OAuth provider's user ID
-    oauth_email VARCHAR(255),                -- Email from OAuth provider
-    
-    -- Verification fields
+    password_hash VARCHAR(255),
     email_verified BOOLEAN DEFAULT FALSE,
-    verification_code VARCHAR(10),
-    verification_expires DATETIME,
-    
-    -- Account status
-    is_active BOOLEAN DEFAULT TRUE,
-    last_login DATETIME
+    text_verified BOOLEAN DEFAULT FALSE    -- For future twilio verification implementation either email or phone
+);
+
+-- OAuth users table - for google and github authentication
+CREATE TABLE IF NOT EXISTS oauth_users (
+    id VARCHAR(20) PRIMARY KEY,  -- Format: O1, O2, O3...
+    oauth_email VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
+    oauth_provider VARCHAR(50) NOT NULL
 );

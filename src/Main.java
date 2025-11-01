@@ -1,5 +1,5 @@
 
-import homepage.ResumeBuilderContainer;
+import ui.ResumeBuilderContainer;
 
 public class Main {
     public static void main(String[] args) {

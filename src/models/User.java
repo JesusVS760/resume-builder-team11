@@ -1,7 +1,7 @@
 package models;
 
 public class User {
-    private int id;
+    private String id;
     private String email;
     private String passwordHash;
     private String name;
@@ -12,7 +12,6 @@ public class User {
     private boolean emailVerified;
     private String verificationCode;
     private String verificationExpires;
-    private boolean isActive;
     private String lastLogin;
     private boolean phoneVerified;  // Add this field at the top with other variables
 
@@ -25,12 +24,11 @@ public class User {
         this.passwordHash = passwordHash;
         this.name = name;
         this.emailVerified = false;
-        this.isActive = true;
     }
     
     // Getters and Setters
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -61,10 +59,7 @@ public class User {
     
     public String getVerificationExpires() { return verificationExpires; }
     public void setVerificationExpires(String verificationExpires) { this.verificationExpires = verificationExpires; }
-    
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
-    
+
     public String getLastLogin() { return lastLogin; }
     public void setLastLogin(String lastLogin) { this.lastLogin = lastLogin; }
 

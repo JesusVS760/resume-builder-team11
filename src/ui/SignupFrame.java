@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import services.AuthService;
+import models.User;
 
 public class SignupFrame extends JFrame {
     
@@ -14,10 +15,16 @@ public class SignupFrame extends JFrame {
     private JPasswordField confirmPasswordField;
     private JButton signupButton;
     private JButton backToLoginButton;
+    private JButton googleSignupButton;
+    private JButton githubSignupButton;
     private JLabel titleLabel;
     private JLabel emailLabel;
     private JLabel passwordLabel;
     private JLabel confirmPasswordLabel;
+    private JLabel orLabel;
+
+    // Track running OAuth operations
+    private SwingWorker<?, ?> runningOAuthWorker;
     
     // Colors - macOS compatible
     private static final Color NAVY_BLUE = new Color(0x1f2937);
@@ -46,6 +53,7 @@ public class SignupFrame extends JFrame {
         createComponents();
         layoutComponents();
         setupEventListeners();
+        setupWindowListeners();
     }
     
     private void initializeFrame() {
@@ -71,24 +79,27 @@ public class SignupFrame extends JFrame {
         emailField = new JTextField(20);
         emailField.setFont(new Font("Arial", Font.PLAIN, 14));
         emailField.setPreferredSize(new Dimension(200, 30));
-        
+        emailField.setMinimumSize(new Dimension(200, 30));
+
         // Password components
         passwordLabel = new JLabel("Password:");
         passwordLabel.setForeground(WHITE);
         passwordLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        
+
         passwordField = new JPasswordField(20);
         passwordField.setFont(new Font("Arial", Font.PLAIN, 14));
         passwordField.setPreferredSize(new Dimension(200, 30));
-        
+        passwordField.setMinimumSize(new Dimension(200, 30));
+
         // Confirm Password components
         confirmPasswordLabel = new JLabel("Confirm Password:");
         confirmPasswordLabel.setForeground(WHITE);
         confirmPasswordLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        
+
         confirmPasswordField = new JPasswordField(20);
         confirmPasswordField.setFont(new Font("Arial", Font.PLAIN, 14));
         confirmPasswordField.setPreferredSize(new Dimension(200, 30));
+        confirmPasswordField.setMinimumSize(new Dimension(200, 30));
         
         // Buttons - ensure visibility on macOS
         signupButton = new JButton("Create Account");
@@ -106,6 +117,41 @@ public class SignupFrame extends JFrame {
         backToLoginButton.setPreferredSize(new Dimension(120, 25));
         backToLoginButton.setFocusPainted(false);
         backToLoginButton.setOpaque(true);  // Ensure background is painted
+
+        // OAuth buttons - unified continue flow
+        googleSignupButton = new JButton("Continue with Google");
+        googleSignupButton.setBackground(LIGHT_BLUE);
+        googleSignupButton.setForeground(Color.BLACK);
+        googleSignupButton.setFont(new Font("Arial", Font.BOLD, 14));
+        googleSignupButton.setPreferredSize(new Dimension(150, 35));
+        googleSignupButton.setFocusPainted(false);
+        googleSignupButton.setOpaque(true);
+
+        githubSignupButton = new JButton("Continue with GitHub");
+        githubSignupButton.setBackground(LIGHT_BLUE);
+        githubSignupButton.setForeground(Color.BLACK);
+        githubSignupButton.setFont(new Font("Arial", Font.BOLD, 14));
+        githubSignupButton.setPreferredSize(new Dimension(150, 35));
+        githubSignupButton.setFocusPainted(false);
+        githubSignupButton.setOpaque(true);
+
+        // Load OAuth icons
+        ImageIcon googleIcon = loadScaledIcon("/ui/images/Google.png", "src/ui/images/Google.png", 20, 20);
+        ImageIcon githubIcon = loadScaledIcon("/ui/images/Github.png", "src/ui/images/Github.png", 20, 20);
+
+        // Set icons on buttons
+        if (googleIcon != null) {
+            googleSignupButton.setIcon(googleIcon);
+            googleSignupButton.setIconTextGap(8); // Space between icon and text
+        }
+        if (githubIcon != null) {
+            githubSignupButton.setIcon(githubIcon);
+            githubSignupButton.setIconTextGap(8); // Space between icon and text
+        }
+
+        orLabel = new JLabel("or");
+        orLabel.setForeground(WHITE);
+        orLabel.setFont(new Font("Arial", Font.PLAIN, 12));
     }
     
     private void layoutComponents() {
@@ -122,40 +168,62 @@ public class SignupFrame extends JFrame {
         centerPanel.setBackground(NAVY_BLUE);
         centerPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        
+
         // Email row
         gbc.gridx = 0; gbc.gridy = 0;
-        gbc.insets = new Insets(10, 0, 5, 10);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(emailLabel, gbc);
-        
+
         gbc.gridx = 1; gbc.gridy = 0;
-        gbc.insets = new Insets(10, 0, 5, 0);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(emailField, gbc);
-        
+
         // Password row
         gbc.gridx = 0; gbc.gridy = 1;
-        gbc.insets = new Insets(10, 0, 5, 10);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(passwordLabel, gbc);
-        
+
         gbc.gridx = 1; gbc.gridy = 1;
-        gbc.insets = new Insets(10, 0, 5, 0);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(passwordField, gbc);
-        
+
         // Confirm Password row
         gbc.gridx = 0; gbc.gridy = 2;
-        gbc.insets = new Insets(10, 0, 5, 10);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(confirmPasswordLabel, gbc);
-        
+
         gbc.gridx = 1; gbc.gridy = 2;
-        gbc.insets = new Insets(10, 0, 5, 0);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(confirmPasswordField, gbc);
         
         // Signup button
         gbc.gridx = 0; gbc.gridy = 3;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(10, 0, 20, 0);
+        gbc.insets = new Insets(25, 0, 5, 0);
         centerPanel.add(signupButton, gbc);
-        
+
+        // OAuth section
+        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(5, 0, 5, 0);
+        centerPanel.add(orLabel, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 5;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(5, 50, 5, 50);
+        centerPanel.add(googleSignupButton, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 6;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(5, 50, 20, 50);
+        centerPanel.add(githubSignupButton, gbc);
+
         // Bottom panel for back to login
         JPanel bottomPanel = new JPanel();
         bottomPanel.setBackground(NAVY_BLUE);
@@ -196,6 +264,21 @@ public class SignupFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 handleSignup();
+            }
+        });
+
+        // OAuth button actions
+        googleSignupButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleOAuthContinue("google");
+            }
+        });
+
+        githubSignupButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleOAuthContinue("github");
             }
         });
     }
@@ -246,7 +329,95 @@ public class SignupFrame extends JFrame {
         new LoginFrame().setVisible(true);
         this.dispose();
     }
-    
+
+    private void handleOAuthContinue(String provider) {
+        // Disable buttons during OAuth flow
+        googleSignupButton.setEnabled(false);
+        githubSignupButton.setEnabled(false);
+        signupButton.setEnabled(false);
+
+        // Run OAuth in background thread to keep UI responsive
+        SwingWorker<User, Void> oauthWorker = new SwingWorker<User, Void>() {
+            @Override
+            protected User doInBackground() throws Exception {
+                // Perform OAuth continue on background thread
+                return "google".equals(provider) ? authService.continueWithGoogle() : authService.continueWithGitHub();
+            }
+
+            @Override
+            protected void done() {
+                runningOAuthWorker = null; // Clear reference when done
+                try {
+                    User user = get();
+
+                    if (user != null) {
+                        // Show success message
+                        String providerName = "google".equals(provider) ? "Google" : "GitHub";
+                        JOptionPane.showMessageDialog(SignupFrame.this,
+                            "Successfully signed in with " + providerName + "!\nWelcome " + user.getName() + "!",
+                            "Success", JOptionPane.INFORMATION_MESSAGE);
+
+                        // Close signup frame - main application should already be running
+                        dispose();
+                    }
+
+                } catch (Exception e) {
+                    String errorMessage = e.getMessage();
+
+                    // Handle OAuth errors with user-friendly messages
+                    if (errorMessage != null && errorMessage.contains("OAuth")) {
+                        JOptionPane.showMessageDialog(SignupFrame.this,
+                            "OAuth authentication failed. Please try again or use regular signup.",
+                            "Authentication Failed", JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(SignupFrame.this, "Authentication failed: " + errorMessage,
+                                                    "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } finally {
+                    // Re-enable buttons
+                    googleSignupButton.setEnabled(true);
+                    githubSignupButton.setEnabled(true);
+                    signupButton.setEnabled(true);
+                }
+            }
+        };
+
+        // Track the running worker and start it
+        runningOAuthWorker = oauthWorker;
+        oauthWorker.execute();
+    }
+
+    private void setupWindowListeners() {
+        // Cancel any running OAuth operations when window is closed
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                if (runningOAuthWorker != null && !runningOAuthWorker.isDone()) {
+                    runningOAuthWorker.cancel(true); // Cancel the OAuth operation
+                    runningOAuthWorker = null;
+                }
+            }
+        });
+    }
+
+    /**
+     * Load and scale an icon from classpath or file fallback
+     */
+    private ImageIcon loadScaledIcon(String classpath, String fileFallback, int w, int h) {
+        try {
+            java.net.URL url = SignupFrame.class.getResource(classpath);
+            if (url == null) {
+                java.io.File f = new java.io.File(fileFallback);
+                if (f.exists()) url = f.toURI().toURL();
+            }
+            if (url == null) return null;
+            Image img = new ImageIcon(url).getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+            return new ImageIcon(img);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // Main method for testing
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {

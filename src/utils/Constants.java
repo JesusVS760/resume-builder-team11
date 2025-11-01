@@ -3,9 +3,24 @@ package utils;
 import models.User;
 
 public class Constants {
+
+    // Initialize DotEnvLoader when Constants class is loaded
+    static {
+        DotEnvLoader.get("DUMMY"); // This triggers the static block in DotEnvLoader
+    }
     // Application constants
     public static final String APP_NAME = "Tailored Resume Builder";
     public static final String APP_VERSION = "1.0.0";
+
+    // OAuth Configuration - LOADED FROM ENVIRONMENT VARIABLES
+    public static final class OAuth {
+        // Load credentials from .env file or environment variables
+        // This ensures no sensitive data is hardcoded in source code
+        public static final String GOOGLE_CLIENT_ID = DotEnvLoader.get("GOOGLE_CLIENT_ID", "your-google-oauth-client-id");
+        public static final String GOOGLE_CLIENT_SECRET = DotEnvLoader.get("GOOGLE_CLIENT_SECRET", "your-google-oauth-client-secret");
+        public static final String GITHUB_CLIENT_ID = DotEnvLoader.get("GITHUB_CLIENT_ID", "your-github-oauth-client-id");
+        public static final String GITHUB_CLIENT_SECRET = DotEnvLoader.get("GITHUB_CLIENT_SECRET", "your-github-oauth-client-secret");
+    }
 
     // Session management
     public static class Session {

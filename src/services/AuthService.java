@@ -75,7 +75,7 @@ public class AuthService {
             User adminUser = new User();
             adminUser.setEmail("Admin");
             adminUser.setName("Administrator");
-            adminUser.setId(-1); // Special ID for admin
+            adminUser.setId("ADMIN"); // Special ID for admin
             return adminUser;
         }
         
@@ -90,12 +90,7 @@ public class AuthService {
         if (!PasswordUtil.verifyPassword(password, user.getPasswordHash())) {
             return null; // Invalid password
         }
-        
-        // Check if account is active
-        if (!user.isActive()) {
-            throw new IllegalStateException("Account is deactivated");
-        }
-        
+
         return user;
     }
     
@@ -136,5 +131,46 @@ public class AuthService {
             return false;
         }
         return userDAO.emailExists(email.trim().toLowerCase());
+    }
+
+    // Direct OAuth Methods
+    public User googleLogin() throws Exception {
+        OAuthService oauthService = new OAuthService();
+        User user = oauthService.signInWithGoogle();
+
+        if (user != null) {
+            // Store user session
+            utils.Constants.Session.login(user);
+            return user;
+        }
+
+        throw new Exception("Google OAuth authentication failed");
+    }
+
+    // Unified OAuth methods - handles both login and signup automatically
+    public User continueWithGoogle() throws Exception {
+        OAuthService oauthService = new OAuthService();
+        User user = oauthService.continueWithGoogle();
+
+        if (user != null) {
+            // Store user session
+            utils.Constants.Session.login(user);
+            return user;
+        }
+
+        throw new Exception("Google OAuth authentication failed");
+    }
+
+    public User continueWithGitHub() throws Exception {
+        OAuthService oauthService = new OAuthService();
+        User user = oauthService.continueWithGitHub();
+
+        if (user != null) {
+            // Store user session
+            utils.Constants.Session.login(user);
+            return user;
+        }
+
+        throw new Exception("GitHub OAuth authentication failed");
     }
 }

@@ -1,0 +1,4 @@
+-Waiting on Twilio to get back to us so we can implement 2 factor authentication
+-Fixed the issue of the software not being able to run on one of our machines
+-Need to implement oAuth
+-Need to clean up database schema and maybe separate normal users and oAuth users

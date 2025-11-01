@@ -1,4 +1,4 @@
-package homepage;
+package ui;
 
 import ui.LandingPanel;
 import ui.UploadPanel;
@@ -81,8 +81,8 @@ public class ResumeBuilderContainer extends JFrame {
 
         // Icon for profile if available (classpath first, then file fallback)
         ImageIcon profileIcon = loadScaledIcon(
-                "/homepage/images/profilePic.png",
-                "src/homepage/images/profilePic.png",
+                "/ui/images/profilePic.png",
+                "src/ui/images/profilePic.png",
                 24, 24
         );
         if (profileIcon != null) profileButton.setIcon(profileIcon);
@@ -189,7 +189,7 @@ public class ResumeBuilderContainer extends JFrame {
     private void plugContent() {
         homePanel.removeAll();
         homePanel.setLayout(new BorderLayout());
-        homePanel.add(new LandingPanel("src/homepage/images/landing_hero.png"), BorderLayout.CENTER);
+        homePanel.add(new LandingPanel("src/ui/images/landing_hero.png"), BorderLayout.CENTER);
 
         buildResumePanel.removeAll();
         buildResumePanel.setLayout(new BorderLayout());
@@ -349,8 +349,8 @@ public class ResumeBuilderContainer extends JFrame {
 
     /**
      * Try to load an icon from classpath; if missing, fallback to a file path.
-     * @param classpath   e.g. "/homepage/images/profilePic.png"
-     * @param fileFallback e.g. "src/homepage/images/profilePic.png"
+     * @param classpath   e.g. "/ui/images/profilePic.png"
+     * @param fileFallback e.g. "src/ui/images/profilePic.png"
      */
     private ImageIcon loadScaledIcon(String classpath, String fileFallback, int w, int h) {
         try {

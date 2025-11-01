@@ -44,13 +44,20 @@ sqlite3 database/database.db
 .tables
 
 
-**View all user data**
+**View data of users who sign up normally**
 
 
 SELECT * FROM users;
 
 
+**View data of users who signed up using oAuth**
+
+SELECT * FROM oauth_users;
+
+
 **Exit SQLite**
 
 .quit
+
+
 

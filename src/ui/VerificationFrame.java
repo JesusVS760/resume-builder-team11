@@ -13,187 +13,315 @@ public class VerificationFrame extends JFrame {
     private JTextField codeField;
     private JButton sendCodeButton;
     private JButton verifyButton;
+    private JLabel titleLabel;
+    private JLabel emailLabel;
+    private JLabel codeLabel;
     private JLabel statusLabel;
-    private TwilioService twilioService;
-    private User currentUser;
-    private boolean codeWasSent;
 
-    private static final Color NAVY_BLUE = new Color(0x1f2937);
+    private static final Color NAVY_BLUE = new Color(30, 58, 138); // Updated background color
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
-    private static final Color WHITE = Color.WHITE;
     private static final Color GREEN = new Color(34, 139, 34);
+    private static final Color WHITE = Color.WHITE;
+
+    private TwilioService twilioService; // service that sends email codes
+    private User currentUser; // user trying to verify their email
+    private boolean codeWasSent;
 
     public VerificationFrame(User user) {
         this.currentUser = user;
         this.twilioService = new TwilioService();
         this.codeWasSent = false;
-        initUI();
+        initializeFrame();                          // Set up the window basics
+        createComponents();                         // Create all the UI elements
+        layoutComponents();                         // Arrange them on the screen
+        setupEventListeners();
     }
 
-    private void initUI() {
+    private void initializeFrame() {
         setTitle("Resume Builder - Email Verification");
-        setSize(400, 400);
-        setLocationRelativeTo(null);
-        setResizable(false);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(450, 500); // window size
+        setLocationRelativeTo(null); // Center the window to screen
+        setResizable(false); // Don't allow user to resize
         getContentPane().setBackground(NAVY_BLUE);
-        setLayout(new GridBagLayout()); // Center everything
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(10, 20, 10, 20);
+    }
 
-        // Main panel with rounded border
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(NAVY_BLUE);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(LIGHT_BLUE, 2),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
+    // COMPONENTS
 
-        GridBagConstraints pgbc = new GridBagConstraints();
-        pgbc.fill = GridBagConstraints.HORIZONTAL;
-        pgbc.insets = new Insets(10, 10, 10, 10);
-        pgbc.gridx = 0;
-        pgbc.gridy = 0;
-
-        JLabel titleLabel = new JLabel("Email Verification", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+    private void createComponents() {
+        titleLabel = new JLabel("Email Verification");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBackground(WHITE);
         titleLabel.setForeground(WHITE);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        pgbc.gridwidth = 2;
-        panel.add(titleLabel, pgbc);
 
-        // Email label & field
-        pgbc.gridy++;
-        pgbc.gridwidth = 1;
-        JLabel emailLabel = new JLabel("Email Address:");
+        // EMAIL ADDRESS LABEL & INPUT FIELDS
+
+        emailLabel = new JLabel("Email Address:");
         emailLabel.setForeground(WHITE);
-        panel.add(emailLabel, pgbc);
+        emailLabel.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        emailField = new JTextField();
-        emailField.setPreferredSize(new Dimension(200, 30));
-        panel.add(emailField, pgbc = copyGbc(pgbc, 1, pgbc.gridy));
+        emailField = new JTextField(20);
+        emailField.setFont(new Font("Arial", Font.PLAIN, 14));
+        emailField.setPreferredSize(new Dimension(250, 30));
+        emailField.setToolTipText("Enter your email address");
 
-        // Send code button
-        pgbc.gridy++;
-        pgbc.gridx = 0;
-        pgbc.gridwidth = 2;
+        // SEND CODE BUTTON
+
         sendCodeButton = new JButton("Send Code");
-        styleButton(sendCodeButton, LIGHT_BLUE, NAVY_BLUE);
-        panel.add(sendCodeButton, pgbc);
+        sendCodeButton.setBackground(LIGHT_BLUE);
+        sendCodeButton.setForeground(NAVY_BLUE);
+        sendCodeButton.setFont(new Font("Arial", Font.BOLD, 14));
+        sendCodeButton.setPreferredSize(new Dimension(150, 35));
+        sendCodeButton.setFocusPainted(false);
 
-        // Code label & field
-        pgbc.gridy++;
-        pgbc.gridwidth = 1;
-        pgbc.gridx = 0;
-        JLabel codeLabel = new JLabel("Verification Code:");
+        // VERIFICATION CODE LABEL & TEXT FIELD
+        codeLabel = new JLabel("Verification Code:");
         codeLabel.setForeground(WHITE);
-        panel.add(codeLabel, pgbc);
+        codeLabel.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        codeField = new JTextField();
-        codeField.setPreferredSize(new Dimension(200, 30));
-        codeField.setEditable(false);
-        panel.add(codeField, copyGbc(pgbc, 1, pgbc.gridy));
+        codeField = new JTextField(20);
+        codeField.setFont(new Font("Arial", Font.PLAIN, 14));
+        codeField.setPreferredSize(new Dimension(250, 30));
+        codeField.setEditable(false); // DISABLED
+        codeField.setToolTipText("Enter the 6-digit code from your email");
 
-        // Verify button
-        pgbc.gridy++;
-        pgbc.gridx = 0;
-        pgbc.gridwidth = 2;
+        // VERIFY BUTTON
+
         verifyButton = new JButton("Verify Code");
-        verifyButton.setEnabled(false);
-        styleButton(verifyButton, GREEN, WHITE);
-        panel.add(verifyButton, pgbc);
+        verifyButton.setBackground(GREEN);
+        verifyButton.setForeground(WHITE);
+        verifyButton.setFont(new Font("Arial", Font.BOLD, 14));
+        verifyButton.setPreferredSize(new Dimension(150, 35));
+        verifyButton.setFocusPainted(false);
+        verifyButton.setEnabled(false); // DISABLED
 
-        // Status label
-        pgbc.gridy++;
-        statusLabel = new JLabel("Enter your email and click 'Send Code'", SwingConstants.CENTER);
+        // STATUS LABEL
+
+        statusLabel = new JLabel("Enter your email address and click 'Send Code'");
         statusLabel.setForeground(LIGHT_BLUE);
         statusLabel.setFont(new Font("Arial", Font.ITALIC, 12));
-        panel.add(statusLabel, pgbc);
-
-        // Add panel to frame
-        add(panel);
-
-        setupListeners();
+        statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
     }
 
-    private void setupListeners() {
-        sendCodeButton.addActionListener(e -> handleSendCode());
-        verifyButton.addActionListener(e -> handleVerifyCode());
+    // LAYOUT
+
+    private void layoutComponents() {
+        setLayout(new BorderLayout());
+
+        // TOP SECTION
+        JPanel topPanel = new JPanel();
+        topPanel.setBackground(NAVY_BLUE);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(40, 0, 30, 0));
+        topPanel.add(titleLabel);
+
+        // CENTER SECTION
+
+        JPanel centerPanel = new JPanel();
+        centerPanel.setBackground(NAVY_BLUE);
+        centerPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+
+        // Email Label
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        centerPanel.add(emailLabel, gbc);
+
+        // Email Input Field
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        centerPanel.add(emailField, gbc);
+
+        // Send Code Button
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.CENTER;
+        centerPanel.add(sendCodeButton, gbc);
+
+        // Spacer (empty row for spacing)
+        gbc.gridy = 2;
+        gbc.insets = new Insets(20, 10, 20, 10);
+        centerPanel.add(new JLabel(""), gbc);
+
+        // Code Label
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        centerPanel.add(codeLabel, gbc);
+
+        // Code Input Field
+        gbc.gridx = 1;
+        gbc.gridy = 3;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        centerPanel.add(codeField, gbc);
+
+        // Verification Button
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.CENTER;
+        centerPanel.add(verifyButton, gbc);
+
+        // BOTTOM SECTION
+
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setBackground(NAVY_BLUE);
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 50, 20));
+        bottomPanel.setLayout(new BorderLayout());
+        bottomPanel.add(statusLabel, BorderLayout.CENTER);
+
+        // add to window
+        add(topPanel, BorderLayout.NORTH);
+        add(centerPanel, BorderLayout.CENTER);
+        add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private void setupEventListeners() {
+        sendCodeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleSendCode(); // send code
+            }
+        });
+
+        verifyButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleVerifyCode();  // Verify the code user entered
+            }
+        });
     }
 
     private void handleSendCode() {
         String email = emailField.getText().trim();
+
         if (email.isEmpty()) {
             showError("Please enter an email address");
             return;
         }
+
+        // Basic email format validation
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            showError("Please enter a valid email address");
+            return;
+        }
+
         try {
+            // Disable send button to prevent multiple clicks
             sendCodeButton.setEnabled(false);
-            statusLabel.setText("Sending code...");
-            boolean sent = twilioService.sendVerificationCode(email);
-            if (sent) {
+            updateStatus("Sending verification code...", LIGHT_BLUE);
+
+            // Ask TwilioService to send email code
+            boolean codeSent = twilioService.sendVerificationCode(email);
+
+            if (codeSent) {
                 codeWasSent = true;
                 emailField.setEditable(false);
                 codeField.setEditable(true);
                 verifyButton.setEnabled(true);
-                statusLabel.setText("Verification code sent!");
+                updateStatus("Verification code sent! Check your email inbox.", GREEN);
+
+                // Focus on code field for convenience
+                codeField.requestFocus();
             } else {
-                showError("Failed to send verification code");
+                showError("Failed to send verification code! Please try again.");
                 sendCodeButton.setEnabled(true);
             }
-        } catch (Exception ex) {
-            showError("Error: " + ex.getMessage());
+        } catch (Exception e) {
+            showError("Error: " + e.getMessage());
             sendCodeButton.setEnabled(true);
         }
     }
 
     private void handleVerifyCode() {
-        String code = codeField.getText().trim();
-        if (!code.matches("\\d{6}")) {
-            showError("Enter a valid 6-digit code");
+        String enteredCode = codeField.getText().trim();
+
+        if (enteredCode.isEmpty()) {
+            showError("Please enter the verification code");
             return;
         }
+
+        // Validate code format (6 digits)
+        if (!enteredCode.matches("^\\d{6}$")) {
+            showError("Verification code must be 6 digits");
+            return;
+        }
+
         try {
-            boolean valid = twilioService.verifyCode(code);
-            if (valid) {
-                currentUser.setPhoneVerified(true);
-                statusLabel.setText("Email verified successfully!");
-                JOptionPane.showMessageDialog(this, "Email verified! You can now log in.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                new LoginFrame().setVisible(true);
-                dispose();
+            updateStatus("Verifying code...", LIGHT_BLUE);
+
+            // Ask TwilioService to verify if the code is correct
+            boolean isValid = twilioService.verifyCode(enteredCode);
+
+            if (isValid) {
+                // Success - email is verified
+                updateStatus("Email verified successfully!", GREEN);
+                showSuccess("Your email has been verified!\n\nYou can now log in to your account.");
+
+                // Store that this user's email is verified
+                currentUser.setPhoneVerified(true); // You might want to rename this to setEmailVerified()
+
+                // Disable all inputs
+                verifyButton.setEnabled(false);
+                codeField.setEditable(false);
+
+                // Close this window and open login frame after a short delay
+                Timer timer = new Timer(1500, new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        // Open login frame
+                        new LoginFrame().setVisible(true);
+                        // Close verification frame
+                        dispose();
+                    }
+                });
+                timer.setRepeats(false);
+                timer.start();
             } else {
-                showError("Invalid verification code");
-                codeField.setText("");
+                // Failed - code was wrong
+                showError("Invalid verification code. Please try again.");
+                codeField.setText("");  // Clear the code field
+                codeField.requestFocus();
             }
-        } catch (Exception ex) {
-            showError("Error: " + ex.getMessage());
+        } catch (Exception e) {
+            showError("Error: " + e.getMessage());
         }
     }
 
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+        updateStatus(message, new Color(255, 0, 0));
+    }
+
+    private void showSuccess(String message) {
+        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void updateStatus(String message, Color color) {
         statusLabel.setText(message);
-        statusLabel.setForeground(Color.RED);
-    }
-
-    private void styleButton(JButton button, Color bg, Color fg) {
-        button.setBackground(bg);
-        button.setForeground(fg);
-        button.setFont(new Font("Arial", Font.BOLD, 14));
-        button.setFocusPainted(false);
-        button.setOpaque(true);
-    }
-
-    private GridBagConstraints copyGbc(GridBagConstraints gbc, int x, int y) {
-        GridBagConstraints c = (GridBagConstraints) gbc.clone();
-        c.gridx = x;
-        c.gridy = y;
-        return c;
+        statusLabel.setForeground(color);
     }
 
     public static void main(String[] args) {
+        // Load environment variables
+        utils.EnvLoader.load();
+
+        // Create a dummy user for testing
         User testUser = new User();
         testUser.setName("Test User");
-        SwingUtilities.invokeLater(() -> new VerificationFrame(testUser).setVisible(true));
+
+        // Open the verification frame
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new VerificationFrame(testUser).setVisible(true);
+            }
+        });
     }
 }

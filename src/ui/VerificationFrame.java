@@ -9,23 +9,22 @@ import models.User;
 
 public class VerificationFrame extends JFrame {
 
-    private JTextField phoneField;
+    private JTextField emailField;
     private JTextField codeField;
     private JButton sendCodeButton;
     private JButton verifyButton;
     private JLabel titleLabel;
-    private JLabel phoneLabel;
+    private JLabel emailLabel;
     private JLabel codeLabel;
     private JLabel statusLabel;
-
 
     private static final Color NAVY_BLUE = new Color(111, 111, 222);
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
     private static final Color GREEN = new Color(34, 139, 34);
     private static final Color WHITE = Color.WHITE;
 
-    private TwilioService twilioService; // service that sends SMS codes via Twilio
-    private User currentUser; // user trying to verify their phone
+    private TwilioService twilioService; // service that sends email codes via SendGrid
+    private User currentUser; // user trying to verify their email
     private boolean codeWasSent;
 
     public VerificationFrame(User user) {
@@ -36,37 +35,36 @@ public class VerificationFrame extends JFrame {
         createComponents();                         // Create all the UI elements
         layoutComponents();                         // Arrange them on the screen
         setupEventListeners();
-
     }
 
     private void initializeFrame() {
-        setTitle("Resume Builder - Phone Verification");
+        setTitle("Resume Builder - Email Verification");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(450,500); // window size
+        setSize(450, 500); // window size
         setLocationRelativeTo(null); // Center the window to screen
-        setResizable(false); // Don't allow user to resize ?? may change ??
+        setResizable(false); // Don't allow user to resize
         getContentPane().setBackground(NAVY_BLUE);
     }
 
     // COMPONENTS
 
     private void createComponents() {
-        titleLabel = new JLabel("Phone Verification");
+        titleLabel = new JLabel("Email Verification");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBackground(WHITE);
         titleLabel.setForeground(WHITE);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        //PHONE NUMBER LABEL & INPUT FIELDS
+        // EMAIL ADDRESS LABEL & INPUT FIELDS
 
-        phoneLabel = new JLabel("Phone Number:");
-        phoneLabel.setForeground(WHITE);
-        phoneLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        emailLabel = new JLabel("Email Address:");
+        emailLabel.setForeground(WHITE);
+        emailLabel.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        phoneField = new JTextField(20);
-        phoneField.setFont(new Font("Arial", Font.PLAIN, 14));
-        phoneField.setPreferredSize(new Dimension(250, 30));
-        phoneField.setToolTipText("Format: +1234567890");  // Helper text
+        emailField = new JTextField(20);
+        emailField.setFont(new Font("Arial", Font.PLAIN, 14));
+        emailField.setPreferredSize(new Dimension(250, 30));
+        emailField.setToolTipText("Enter your email address");
 
         // SEND CODE BUTTON
 
@@ -86,11 +84,11 @@ public class VerificationFrame extends JFrame {
         codeField.setFont(new Font("Arial", Font.PLAIN, 14));
         codeField.setPreferredSize(new Dimension(250, 30));
         codeField.setEditable(false); // DISABLED
-
+        codeField.setToolTipText("Enter the 6-digit code from your email");
 
         // VERIFY BUTTON
 
-        verifyButton = new JButton("Verification Code");
+        verifyButton = new JButton("Verify Code");
         verifyButton.setBackground(GREEN);
         verifyButton.setForeground(WHITE);
         verifyButton.setFont(new Font("Arial", Font.BOLD, 14));
@@ -100,11 +98,10 @@ public class VerificationFrame extends JFrame {
 
         // STATUS LABEL
 
-        statusLabel = new JLabel("Enter your phone number and click 'Send Code'");
+        statusLabel = new JLabel("Enter your email address and click 'Send Code'");
         statusLabel.setForeground(LIGHT_BLUE);
         statusLabel.setFont(new Font("Arial", Font.ITALIC, 12));
         statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
     }
 
     // LAYOUT
@@ -115,9 +112,8 @@ public class VerificationFrame extends JFrame {
         // TOP SECTION
         JPanel topPanel = new JPanel();
         topPanel.setBackground(NAVY_BLUE);
-        topPanel.setBorder(BorderFactory.createEmptyBorder(40,0,30,0));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(40, 0, 30, 0));
         topPanel.add(titleLabel);
-
 
         // CENTER SECTION
 
@@ -125,20 +121,23 @@ public class VerificationFrame extends JFrame {
         centerPanel.setBackground(NAVY_BLUE);
         centerPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10,10,10,10);
+        gbc.insets = new Insets(10, 10, 10, 10);
 
-        //Phone Label Field
-        gbc.gridx = 0; gbc.gridy = 0;
+        // Email Label
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        centerPanel.add(phoneLabel, gbc);
+        centerPanel.add(emailLabel, gbc);
 
-        //Phone Input Field
-        gbc.gridx = 1; gbc.gridy = 0;
+        // Email Input Field
+        gbc.gridx = 1;
+        gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        centerPanel.add(phoneField, gbc);
+        centerPanel.add(emailField, gbc);
 
-        // Send Code
-        gbc.gridx = 0; gbc.gridy = 1;
+        // Send Code Button
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.CENTER;
         centerPanel.add(sendCodeButton, gbc);
@@ -149,27 +148,31 @@ public class VerificationFrame extends JFrame {
         centerPanel.add(new JLabel(""), gbc);
 
         // Code Label
-
-        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(10, 10, 10, 10);
         centerPanel.add(codeLabel, gbc);
 
-        gbc.gridx = 1; gbc.gridy = 3;
+        // Code Input Field
+        gbc.gridx = 1;
+        gbc.gridy = 3;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         centerPanel.add(codeField, gbc);
 
         // Verification Button
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0;
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(10,10,10,10);
         centerPanel.add(verifyButton, gbc);
 
         // BOTTOM SECTION
 
         JPanel bottomPanel = new JPanel();
         bottomPanel.setBackground(NAVY_BLUE);
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(20,20,50,20));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 50, 20));
         bottomPanel.setLayout(new BorderLayout());
         bottomPanel.add(statusLabel, BorderLayout.CENTER);
 
@@ -177,11 +180,9 @@ public class VerificationFrame extends JFrame {
         add(topPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
-
     }
 
     private void setupEventListeners() {
-
         sendCodeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -198,45 +199,57 @@ public class VerificationFrame extends JFrame {
     }
 
     private void handleSendCode() {
-        String phoneNumber = phoneField.getText().trim();
+        String email = emailField.getText().trim();
 
-        if(phoneNumber.isEmpty()) {
-            showError("Please enter a phone number");
+        if (email.isEmpty()) {
+            showError("Please enter an email address");
+            return;
+        }
+
+        // Basic email format validation
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            showError("Please enter a valid email address");
             return;
         }
 
         try {
-            // update status message
+            // Disable send button to prevent multiple clicks
+            sendCodeButton.setEnabled(false);
             updateStatus("Sending verification code...", LIGHT_BLUE);
 
-            // ask TwilioService to sen SMS code to the phone number
-            boolean codeSent = twilioService.sendVerificationCode(phoneNumber);
+            // Ask TwilioService to send email code
+            boolean codeSent = twilioService.sendVerificationCode(email);
 
-            if(codeSent) {
-
+            if (codeSent) {
                 codeWasSent = true;
-                phoneField.setEditable(false);
+                emailField.setEditable(false);
                 codeField.setEditable(true);
                 verifyButton.setEnabled(true);
-                updateStatus("Verification Code sent! Check your phone.", GREEN);
+                updateStatus("Verification code sent! Check your email inbox.", GREEN);
+
+                // Focus on code field for convenience
+                codeField.requestFocus();
             } else {
-                showError("Failed to send verification code! Try Again.");
+                showError("Failed to send verification code! Please try again.");
+                sendCodeButton.setEnabled(true);
             }
         } catch (Exception e) {
-            showError("Error:" + e.getMessage());
-
+            showError("Error: " + e.getMessage());
+            sendCodeButton.setEnabled(true);
         }
-
-
     }
-
 
     private void handleVerifyCode() {
         String enteredCode = codeField.getText().trim();
 
+        if (enteredCode.isEmpty()) {
+            showError("Please enter the verification code");
+            return;
+        }
 
-        if(enteredCode.isEmpty()) {
-            showError("Please enter verification code");
+        // Validate code format (6 digits)
+        if (!enteredCode.matches("^\\d{6}$")) {
+            showError("Verification code must be 6 digits");
             return;
         }
 
@@ -247,41 +260,42 @@ public class VerificationFrame extends JFrame {
             boolean isValid = twilioService.verifyCode(enteredCode);
 
             if (isValid) {
-                // Success - phone is verified
-                updateStatus("Phone verified successfully!", GREEN);
-                showSuccess("Your phone has been verified!");
+                // Success - email is verified
+                updateStatus("Email verified successfully!", GREEN);
+                showSuccess("Your email has been verified!\n\nYou can now access all features.");
 
-                // Store that this user's phone is verified
-                currentUser.setPhoneVerified(true);
+                // Store that this user's email is verified
+                currentUser.setPhoneVerified(true); // You might want to rename this to setEmailVerified()
+
+                // Disable all inputs
+                verifyButton.setEnabled(false);
+                codeField.setEditable(false);
 
                 // Close this window after a short delay
-                Timer timer = new Timer(1500, e -> this.dispose());
+                Timer timer = new Timer(2000, e -> this.dispose());
                 timer.setRepeats(false);
                 timer.start();
             } else {
                 // Failed - code was wrong
-                showError("Invalid verification code. Try again.");
+                showError("Invalid verification code. Please try again.");
                 codeField.setText("");  // Clear the code field
+                codeField.requestFocus();
             }
         } catch (Exception e) {
             showError("Error: " + e.getMessage());
-
         }
-
     }
-
 
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
-        updateStatus(message, new Color(255, 0 ,0));
+        updateStatus(message, new Color(255, 0, 0));
     }
-
 
     private void showSuccess(String message) {
         JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void updateStatus(String message,Color color) {
+    private void updateStatus(String message, Color color) {
         statusLabel.setText(message);
         statusLabel.setForeground(color);
     }
@@ -302,7 +316,4 @@ public class VerificationFrame extends JFrame {
             }
         });
     }
-
-
 }
-

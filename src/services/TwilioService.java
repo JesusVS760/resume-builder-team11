@@ -1,77 +1,102 @@
 package services;
 
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
+import javax.mail.*;
+import javax.mail.internet.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
-
 
 public class TwilioService {
 
-    private static final String ACCOUNT_SID = System.getProperty("TWILIO_ACCOUNT_SID");
-    private static final String AUTH_TOKEN = System.getProperty("TWILIO_AUTH_TOKEN");
-    private static final String TWILIO_PHONE = System.getProperty("TWILIO_PHONE_NUMBER");
+    // Gmail SMTP configuration
+    private static final String SMTP_HOST = "smtp.gmail.com";
+    private static final String SMTP_PORT = "587";
+    private static final String EMAIL_USERNAME = System.getProperty("EMAIL_USERNAME");
+    private static final String EMAIL_PASSWORD = System.getProperty("EMAIL_APP_PASSWORD");
+    private static final String FROM_EMAIL = System.getProperty("FROM_EMAIL");
+    private static final String FROM_NAME = "Resume Builder";
 
     // In production, store codes in a database, NOT in memory
     // This is a temporary in-memory storage (codes disappear when app closes)
-    private Map<String, String> verificationCodes;  // Maps phone number to code
+    private Map<String, String> verificationCodes;  // Maps email to code
     private Map<String, Long> codeTimestamps;       // Tracks when code was sent
 
     private static final long CODE_EXPIRATION_TIME = 10 * 60 * 1000;  // 10 minutes in milliseconds
     private static final int CODE_LENGTH = 6;  // 6-digit code
 
-    // Initialize Twilio and storage when TwilioService is created
+    private Session emailSession;
+
+    // Initialize email session and storage when TwilioService is created
     public TwilioService() {
-        // Initialize Twilio with your credentials
-        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        // Configure Gmail SMTP properties
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host", SMTP_HOST);
+        props.put("mail.smtp.port", SMTP_PORT);
+        props.put("mail.smtp.ssl.trust", SMTP_HOST);
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+
+        // Create email session with authentication
+        this.emailSession = Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(EMAIL_USERNAME, EMAIL_PASSWORD);
+            }
+        });
 
         // Create storage for verification codes
         this.verificationCodes = new HashMap<>();
         this.codeTimestamps = new HashMap<>();
+
+        System.out.println("TwilioService initialized with Gmail SMTP");
     }
 
-
-    public boolean sendVerificationCode(String phoneNumber) {
+    public boolean sendVerificationCode(String emailAddress) {
         try {
-            // Validate phone number format
-            if (!isValidPhoneNumber(phoneNumber)) {
-                System.out.println("Invalid phone number format: " + phoneNumber);
+            // Validate email format
+            if (!isValidEmail(emailAddress)) {
+                System.out.println("Invalid email format: " + emailAddress);
                 return false;
             }
 
             // Generate a 6-digit code
             String code = generateVerificationCode();
 
-            // create the SMS message
-            String messageBody = "Your Resume Builder verification code is: " + code +
-                    "\nThis code expires in 10 minutes.";
+            // Create the email message
+            Message message = new MimeMessage(emailSession);
+            message.setFrom(new InternetAddress(FROM_EMAIL, FROM_NAME));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailAddress));
+            message.setSubject("Your Resume Builder Verification Code");
 
-            // send the SMS using Twilio
-            Message message = Message.creator(
-                    new PhoneNumber(phoneNumber),
-                    new PhoneNumber(TWILIO_PHONE),      // From your Twilio number
-                    messageBody                          // Message text
-            ).create();
+            // Create HTML email body
+            String htmlBody = createEmailBody(code);
+            message.setContent(htmlBody, "text/html; charset=utf-8");
 
-            // If we get here, message was sent successfully
-            System.out.println("Message sent with SID: " + message.getSid());
+            // Send the email
+            System.out.println("Attempting to send email to: " + emailAddress);
+            Transport.send(message);
+
+            // If we get here, email was sent successfully
+            System.out.println("Email sent successfully to: " + emailAddress);
 
             // Store the code and timestamp for later verification
-            verificationCodes.put(phoneNumber, code);
-            codeTimestamps.put(phoneNumber, System.currentTimeMillis());
+            verificationCodes.put(emailAddress, code);
+            codeTimestamps.put(emailAddress, System.currentTimeMillis());
 
             return true;
 
+        } catch (MessagingException e) {
+            System.out.println("Error sending email: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         } catch (Exception e) {
-            // Log the error
-            System.out.println("Error sending SMS: " + e.getMessage());
+            System.out.println("Unexpected error: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
-
 
     public boolean verifyCode(String enteredCode) {
         try {
@@ -81,27 +106,27 @@ public class TwilioService {
                 return false;
             }
 
-            // Check each phone number's code
-            for (String phoneNumber : verificationCodes.keySet()) {
-                String storedCode = verificationCodes.get(phoneNumber);
-                long sentTime = codeTimestamps.get(phoneNumber);
+            // Check each email's code
+            for (String email : verificationCodes.keySet()) {
+                String storedCode = verificationCodes.get(email);
+                long sentTime = codeTimestamps.get(email);
                 long currentTime = System.currentTimeMillis();
 
                 // Check if code has expired
                 if (currentTime - sentTime > CODE_EXPIRATION_TIME) {
-                    System.out.println("Code expired for: " + phoneNumber);
-                    verificationCodes.remove(phoneNumber);  // Delete expired code
-                    codeTimestamps.remove(phoneNumber);
+                    System.out.println("Code expired for: " + email);
+                    verificationCodes.remove(email);  // Delete expired code
+                    codeTimestamps.remove(email);
                     continue;  // Skip to next code
                 }
 
                 // Check if entered code matches stored code
                 if (enteredCode.equals(storedCode)) {
-                    System.out.println("Code verified successfully for: " + phoneNumber);
+                    System.out.println("Code verified successfully for: " + email);
 
                     // Clean up - remove code after verification
-                    verificationCodes.remove(phoneNumber);
-                    codeTimestamps.remove(phoneNumber);
+                    verificationCodes.remove(email);
+                    codeTimestamps.remove(email);
 
                     return true;
                 }
@@ -117,26 +142,73 @@ public class TwilioService {
         }
     }
 
-
     private String generateVerificationCode() {
         Random random = new Random();
         int code = 100000 + random.nextInt(900000);  // Generate number between 100000-999999
         return String.valueOf(code);
     }
 
-
-    private boolean isValidPhoneNumber(String phoneNumber) {
-        // Check if phone number matches format: +1234567890
-        return phoneNumber != null && phoneNumber.matches("^\\+[1-9]\\d{1,14}$");
+    private boolean isValidEmail(String email) {
+        // Basic email validation using regex
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return email.matches(emailRegex);
     }
 
+    private String createEmailBody(String code) {
+        return "<!DOCTYPE html>" +
+                "<html>" +
+                "<head>" +
+                "<meta charset='UTF-8'>" +
+                "<style>" +
+                "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }" +
+                ".container { max-width: 600px; margin: 0 auto; padding: 0; }" +
+                ".header { background-color: #6F6FDE; color: white; padding: 30px 20px; text-align: center; }" +
+                ".header h1 { margin: 0; font-size: 28px; }" +
+                ".content { background-color: #f9f9f9; padding: 40px 30px; }" +
+                ".content h2 { color: #6F6FDE; margin-top: 0; }" +
+                ".code-box { background-color: white; border: 3px solid #6F6FDE; border-radius: 8px; " +
+                "padding: 20px; margin: 30px 0; text-align: center; }" +
+                ".code { font-size: 36px; font-weight: bold; color: #6F6FDE; letter-spacing: 8px; " +
+                "font-family: 'Courier New', monospace; }" +
+                ".expiry { color: #d32f2f; font-weight: bold; margin-top: 20px; }" +
+                ".footer { background-color: #6F6FDE; color: white; text-align: center; padding: 20px; " +
+                "font-size: 12px; }" +
+                ".note { color: #666; font-size: 14px; margin-top: 20px; }" +
+                "</style>" +
+                "</head>" +
+                "<body>" +
+                "<div class='container'>" +
+                "<div class='header'>" +
+                "<h1>Resume Builder</h1>" +
+                "</div>" +
+                "<div class='content'>" +
+                "<h2>Email Verification</h2>" +
+                "<p>Thank you for signing up! Please use the verification code below to complete your registration:</p>" +
+                "<div class='code-box'>" +
+                "<div class='code'>" + code + "</div>" +
+                "</div>" +
+                "<p class='expiry'>⏰ This code will expire in 10 minutes.</p>" +
+                "<p class='note'>If you didn't request this code, please ignore this email. " +
+                "Your account will remain secure.</p>" +
+                "</div>" +
+                "<div class='footer'>" +
+                "<p>This is an automated message from Resume Builder.</p>" +
+                "<p>Please do not reply to this email.</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
+    }
 
-    public long getTimeRemaining(String phoneNumber) {
-        if (!codeTimestamps.containsKey(phoneNumber)) {
+    public long getTimeRemaining(String email) {
+        if (!codeTimestamps.containsKey(email)) {
             return -1;  // No code exists
         }
 
-        long sentTime = codeTimestamps.get(phoneNumber);
+        long sentTime = codeTimestamps.get(email);
         long currentTime = System.currentTimeMillis();
         long elapsed = currentTime - sentTime;
         long remaining = CODE_EXPIRATION_TIME - elapsed;
@@ -144,15 +216,14 @@ public class TwilioService {
         return remaining / 1000;  // Convert milliseconds to seconds
     }
 
-    public boolean resendVerificationCode(String phoneNumber) {
+    public boolean resendVerificationCode(String email) {
         // Remove old code and timestamp
-        verificationCodes.remove(phoneNumber);
-        codeTimestamps.remove(phoneNumber);
+        verificationCodes.remove(email);
+        codeTimestamps.remove(email);
 
         // Send new code
-        return sendVerificationCode(phoneNumber);
+        return sendVerificationCode(email);
     }
-
 
     public void clearAllCodes() {
         verificationCodes.clear();

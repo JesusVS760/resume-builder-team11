@@ -14,6 +14,7 @@ public class User {
     private String verificationExpires;
     private String lastLogin;
     private boolean phoneVerified;  // Add this field at the top with other variables
+    private boolean textVerified;
 
 
     // Constructors
@@ -63,6 +64,14 @@ public class User {
     public String getLastLogin() { return lastLogin; }
     public void setLastLogin(String lastLogin) { this.lastLogin = lastLogin; }
 
+
+    public boolean isTextVerified() {
+        return textVerified;
+    }
+
+    public void setTextVerified(boolean textVerified) {
+        this.textVerified = textVerified;
+    }
 
     public void setPhoneVerified(boolean verified) {
         this.phoneVerified = verified;

@@ -7,39 +7,34 @@ import java.util.List;
 
 public class UserDAO {
     private DatabaseConnection dbConnection;
-    
+
     public UserDAO() {
         this.dbConnection = DatabaseConnection.getInstance();
     }
-    
-    public boolean saveUser(User user) {
-        // Generate prefixed ID (U1, U2, U3...)
-        String userId = "U" + getNextUserId();
 
-        String sql = "INSERT INTO users (id, email, password_hash, name, email_verified, text_verified) VALUES (?, ?, ?, ?, ?, ?)";
+    public boolean saveUser(User user) {
+        String sql = "INSERT INTO users (email, password_hash, name, email_verified, text_verified) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = dbConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, userId);
-            stmt.setString(2, user.getEmail());
-            stmt.setString(3, user.getPasswordHash());
-            stmt.setString(4, user.getName());
-            stmt.setBoolean(5, user.isEmailVerified());
-            stmt.setBoolean(6, user.isPhoneVerified()); // Use phone verified for text_verified column
+            ps.setString(1, user.getEmail());
+            ps.setString(2, user.getPasswordHash());
+            ps.setString(3, user.getName());
 
-            int affectedRows = stmt.executeUpdate();
+            // Convert booleans to integers (0 or 1)
+            ps.setInt(4, user.isEmailVerified() ? 1 : 0);
+            ps.setInt(5, user.isTextVerified() ? 1 : 0);
 
-            if (affectedRows > 0) {
-                user.setId(userId);
-                return true;
-            }
+            int rowsAffected = ps.executeUpdate();
+            return rowsAffected > 0;
 
         } catch (SQLException e) {
-            System.err.println("Error saving user: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
-        return false;
     }
+
 
     private int getNextUserId() {
         String sql = "SELECT COUNT(*) FROM users WHERE id LIKE 'U%'";
@@ -57,26 +52,26 @@ public class UserDAO {
         }
         return 1; // Default to 1 if error
     }
-    
+
     public User findByEmail(String email) {
         String sql = "SELECT * FROM users WHERE email = ?";
-        
+
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+
             stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
-            
+
             if (rs.next()) {
                 return mapResultSetToUser(rs);
             }
-            
+
         } catch (SQLException e) {
             System.err.println("Error finding user by email: " + e.getMessage());
         }
         return null;
     }
-    
+
     public boolean emailExists(String email) {
         // Check both users and oauth_users tables
         String sqlUsers = "SELECT COUNT(*) FROM users WHERE email = ?";
@@ -107,43 +102,43 @@ public class UserDAO {
         }
         return false;
     }
-    
+
     public boolean updatePassword(int userId, String newPasswordHash) {
         String sql = "UPDATE users SET password_hash = ? WHERE id = ?";
-        
+
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+
             stmt.setString(1, newPasswordHash);
             stmt.setInt(2, userId);
-            
+
             int affectedRows = stmt.executeUpdate();
             return affectedRows > 0;
-            
+
         } catch (SQLException e) {
             System.err.println("Error updating password: " + e.getMessage());
         }
         return false;
     }
-    
+
     public boolean updateEmailVerification(String email, boolean verified) {
         String sql = "UPDATE users SET email_verified = ? WHERE email = ?";
-        
+
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+
             stmt.setBoolean(1, verified);
             stmt.setString(2, email);
-            
+
             int affectedRows = stmt.executeUpdate();
             return affectedRows > 0;
-            
+
         } catch (SQLException e) {
             System.err.println("Error updating email verification: " + e.getMessage());
         }
         return false;
     }
-    
+
     public User findByOAuthEmail(String provider, String email) {
         String sql = "SELECT * FROM oauth_users WHERE oauth_provider = ? AND oauth_email = ?";
 

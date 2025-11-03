@@ -23,7 +23,7 @@ public class VerificationFrame extends JFrame {
     private static final Color GREEN = new Color(34, 139, 34);
     private static final Color WHITE = Color.WHITE;
 
-    private TwilioService twilioService; // service that sends email codes via SendGrid
+    private TwilioService twilioService; // service that sends email codes
     private User currentUser; // user trying to verify their email
     private boolean codeWasSent;
 
@@ -262,7 +262,7 @@ public class VerificationFrame extends JFrame {
             if (isValid) {
                 // Success - email is verified
                 updateStatus("Email verified successfully!", GREEN);
-                showSuccess("Your email has been verified!\n\nYou can now access all features.");
+                showSuccess("Your email has been verified!\n\nYou can now log in to your account.");
 
                 // Store that this user's email is verified
                 currentUser.setPhoneVerified(true); // You might want to rename this to setEmailVerified()
@@ -271,8 +271,16 @@ public class VerificationFrame extends JFrame {
                 verifyButton.setEnabled(false);
                 codeField.setEditable(false);
 
-                // Close this window after a short delay
-                Timer timer = new Timer(2000, e -> this.dispose());
+                // Close this window and open login frame after a short delay
+                Timer timer = new Timer(1500, new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        // Open login frame
+                        new LoginFrame().setVisible(true);
+                        // Close verification frame
+                        dispose();
+                    }
+                });
                 timer.setRepeats(false);
                 timer.start();
             } else {

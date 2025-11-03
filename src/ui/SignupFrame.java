@@ -8,7 +8,7 @@ import services.AuthService;
 import models.User;
 
 public class SignupFrame extends JFrame {
-    
+
     // UI Components
     private JTextField emailField;
     private JPasswordField passwordField;
@@ -25,16 +25,16 @@ public class SignupFrame extends JFrame {
 
     // Track running OAuth operations
     private SwingWorker<?, ?> runningOAuthWorker;
-    
+
     // Colors - macOS compatible
     private static final Color NAVY_BLUE = new Color(0x1f2937);
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
     private static final Color WHITE = Color.WHITE;
     private static final Color DARK_GRAY = Color.DARK_GRAY;
-    
+
     // Services
     private AuthService authService;
-    
+
     public SignupFrame() {
         // Set system look and feel for better macOS compatibility
         try {
@@ -55,7 +55,7 @@ public class SignupFrame extends JFrame {
         setupEventListeners();
         setupWindowListeners();
     }
-    
+
     private void initializeFrame() {
         setTitle("Resume Builder - Sign Up");
         setSize(400, 500);
@@ -63,19 +63,19 @@ public class SignupFrame extends JFrame {
         setResizable(false);
         getContentPane().setBackground(NAVY_BLUE);
     }
-    
+
     private void createComponents() {
         // Title
         titleLabel = new JLabel("Create Account");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(WHITE);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
+
         // Email components
         emailLabel = new JLabel("Email:");
         emailLabel.setForeground(WHITE);
         emailLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        
+
         emailField = new JTextField(20);
         emailField.setFont(new Font("Arial", Font.PLAIN, 14));
         emailField.setPreferredSize(new Dimension(200, 30));
@@ -100,23 +100,23 @@ public class SignupFrame extends JFrame {
         confirmPasswordField.setFont(new Font("Arial", Font.PLAIN, 14));
         confirmPasswordField.setPreferredSize(new Dimension(200, 30));
         confirmPasswordField.setMinimumSize(new Dimension(200, 30));
-        
+
         // Buttons - ensure visibility on macOS
         signupButton = new JButton("Create Account");
         signupButton.setBackground(LIGHT_BLUE);
-        signupButton.setForeground(Color.BLACK);  // Changed from NAVY_BLUE for better visibility
+        signupButton.setForeground(Color.BLACK);
         signupButton.setFont(new Font("Arial", Font.BOLD, 14));
         signupButton.setPreferredSize(new Dimension(150, 35));
         signupButton.setFocusPainted(false);
-        signupButton.setOpaque(true);  // Ensure background is painted
+        signupButton.setOpaque(true);
 
         backToLoginButton = new JButton("Back to Login");
-        backToLoginButton.setBackground(Color.LIGHT_GRAY);  // Changed from GRAY for better contrast
-        backToLoginButton.setForeground(Color.BLACK);  // Changed from WHITE for better visibility
+        backToLoginButton.setBackground(Color.LIGHT_GRAY);
+        backToLoginButton.setForeground(Color.BLACK);
         backToLoginButton.setFont(new Font("Arial", Font.PLAIN, 12));
         backToLoginButton.setPreferredSize(new Dimension(120, 25));
         backToLoginButton.setFocusPainted(false);
-        backToLoginButton.setOpaque(true);  // Ensure background is painted
+        backToLoginButton.setOpaque(true);
 
         // OAuth buttons - unified continue flow
         googleSignupButton = new JButton("Continue with Google");
@@ -142,27 +142,27 @@ public class SignupFrame extends JFrame {
         // Set icons on buttons
         if (googleIcon != null) {
             googleSignupButton.setIcon(googleIcon);
-            googleSignupButton.setIconTextGap(8); // Space between icon and text
+            googleSignupButton.setIconTextGap(8);
         }
         if (githubIcon != null) {
             githubSignupButton.setIcon(githubIcon);
-            githubSignupButton.setIconTextGap(8); // Space between icon and text
+            githubSignupButton.setIconTextGap(8);
         }
 
         orLabel = new JLabel("or");
         orLabel.setForeground(WHITE);
         orLabel.setFont(new Font("Arial", Font.PLAIN, 12));
     }
-    
+
     private void layoutComponents() {
         setLayout(new BorderLayout());
-        
+
         // Top panel for title
         JPanel topPanel = new JPanel();
         topPanel.setBackground(NAVY_BLUE);
         topPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 20, 0));
         topPanel.add(titleLabel);
-        
+
         // Center panel for signup form
         JPanel centerPanel = new JPanel();
         centerPanel.setBackground(NAVY_BLUE);
@@ -201,7 +201,7 @@ public class SignupFrame extends JFrame {
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(10, 10, 5, 10);
         centerPanel.add(confirmPasswordField, gbc);
-        
+
         // Signup button
         gbc.gridx = 0; gbc.gridy = 3;
         gbc.gridwidth = 2;
@@ -228,20 +228,20 @@ public class SignupFrame extends JFrame {
         JPanel bottomPanel = new JPanel();
         bottomPanel.setBackground(NAVY_BLUE);
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 30, 0));
-        
+
         JLabel backLabel = new JLabel("Already have an account?");
         backLabel.setForeground(WHITE);
         backLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        
+
         bottomPanel.add(backLabel);
         bottomPanel.add(backToLoginButton);
-        
+
         // Add panels to frame
         add(topPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
     }
-    
+
     private void setupEventListeners() {
         // Signup button action
         signupButton.addActionListener(new ActionListener() {
@@ -250,7 +250,7 @@ public class SignupFrame extends JFrame {
                 handleSignup();
             }
         });
-        
+
         // Back to login button action
         backToLoginButton.addActionListener(new ActionListener() {
             @Override
@@ -258,7 +258,7 @@ public class SignupFrame extends JFrame {
                 handleBackToLogin();
             }
         });
-        
+
         // Enter key on confirm password field
         confirmPasswordField.addActionListener(new ActionListener() {
             @Override
@@ -282,48 +282,63 @@ public class SignupFrame extends JFrame {
             }
         });
     }
-    
+
     private void handleSignup() {
         String email = emailField.getText().trim();
         String password = new String(passwordField.getPassword());
         String confirmPassword = new String(confirmPasswordField.getPassword());
-        
+
         // Simple validation
         if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill in email and password fields", 
-                                        "Missing Information", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please fill in all fields",
+                    "Missing Information", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         // Check if passwords match
         if (!password.equals(confirmPassword)) {
-            JOptionPane.showMessageDialog(this, "Passwords do not match", 
-                                        "Password Mismatch", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Passwords do not match",
+                    "Password Mismatch", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         try {
-            // Attempt to create account (name will be auto-generated from email)
+            // Attempt to create account
             boolean success = authService.signup(email, password, "");
-            
+
             if (success) {
-                JOptionPane.showMessageDialog(this, "Account created successfully!\nYou can now log in.", 
-                                            "Sign Up Successful", JOptionPane.INFORMATION_MESSAGE);
-                handleBackToLogin();
+                // Show success message
+                JOptionPane.showMessageDialog(this,
+                        "Account created successfully!\nPlease verify your email to continue.",
+                        "Verification Required",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                // Create user object for verification
+                User newUser = new User();
+                newUser.setEmail(email);
+                // Extract name from email (part before @)
+                String name = email.substring(0, email.indexOf('@'));
+                newUser.setName(name);
+
+                // Open verification frame
+                new VerificationFrame(newUser).setVisible(true);
+
+                // Close signup frame
+                this.dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "Failed to create account. Please try again.", 
-                                            "Sign Up Failed", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Failed to create account. Email may already be in use.",
+                        "Sign Up Failed", JOptionPane.ERROR_MESSAGE);
             }
-            
+
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), 
-                                        "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, e.getMessage(),
+                    "Invalid Input", JOptionPane.WARNING_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "An error occurred: " + e.getMessage(), 
-                                        "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "An error occurred: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private void handleBackToLogin() {
         // Open login frame
         new LoginFrame().setVisible(true);
@@ -351,13 +366,14 @@ public class SignupFrame extends JFrame {
                     User user = get();
 
                     if (user != null) {
+                        // OAuth users are automatically verified (trusted providers)
                         // Show success message
                         String providerName = "google".equals(provider) ? "Google" : "GitHub";
                         JOptionPane.showMessageDialog(SignupFrame.this,
-                            "Successfully signed in with " + providerName + "!\nWelcome " + user.getName() + "!",
-                            "Success", JOptionPane.INFORMATION_MESSAGE);
+                                "Successfully signed in with " + providerName + "!\nWelcome " + user.getName() + "!",
+                                "Success", JOptionPane.INFORMATION_MESSAGE);
 
-                        // Close signup frame - main application should already be running
+                        // Close signup frame
                         dispose();
                     }
 
@@ -367,11 +383,11 @@ public class SignupFrame extends JFrame {
                     // Handle OAuth errors with user-friendly messages
                     if (errorMessage != null && errorMessage.contains("OAuth")) {
                         JOptionPane.showMessageDialog(SignupFrame.this,
-                            "OAuth authentication failed. Please try again or use regular signup.",
-                            "Authentication Failed", JOptionPane.ERROR_MESSAGE);
+                                "OAuth authentication failed. Please try again or use regular signup.",
+                                "Authentication Failed", JOptionPane.ERROR_MESSAGE);
                     } else {
                         JOptionPane.showMessageDialog(SignupFrame.this, "Authentication failed: " + errorMessage,
-                                                    "Error", JOptionPane.ERROR_MESSAGE);
+                                "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } finally {
                     // Re-enable buttons

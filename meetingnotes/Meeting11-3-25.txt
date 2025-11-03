@@ -1,0 +1,5 @@
+-Will only use email verification for now
+-Finished with login and signup functions for now
+-Need to work on parsing the resume and job description
+-Need to figure out the logic on how to create the new resume using the inputted resume and job description
+-Need to change DAO structure

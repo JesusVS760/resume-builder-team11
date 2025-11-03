@@ -45,7 +45,7 @@ public class TwilioService {
                 return new PasswordAuthentication(EMAIL_USERNAME, EMAIL_PASSWORD);
             }
         });
-
+       // test
         // Create storage for verification codes
         this.verificationCodes = new HashMap<>();
         this.codeTimestamps = new HashMap<>();

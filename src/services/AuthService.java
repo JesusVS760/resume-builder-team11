@@ -3,15 +3,44 @@ package services;
 import models.User;
 import dao.UserDAO;
 import utils.PasswordUtil;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class AuthService {
+
+    // Temporary storage for pending email verifications
+    private static final Map<String, PendingSignup> pendingSignups = new HashMap<>();
+
+    // Inner class to store pending signup data
+    public static class PendingSignup {
+        private final String email;
+        private final String passwordHash;
+        private final String name;
+        private final String verificationToken;
+        private final long timestamp;
+
+        public PendingSignup(String email, String passwordHash, String name) {
+            this.email = email;
+            this.passwordHash = passwordHash;
+            this.name = name;
+            this.verificationToken = UUID.randomUUID().toString();
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public String getEmail() { return email; }
+        public String getPasswordHash() { return passwordHash; }
+        public String getName() { return name; }
+        public String getVerificationToken() { return verificationToken; }
+        public long getTimestamp() { return timestamp; }
+    }
     private UserDAO userDAO;
     
     public AuthService() {
         this.userDAO = new UserDAO();
     }
     
-    public boolean signup(String email, String password, String name) {
+    public String initiateSignup(String email, String password, String name) {
         // Validate input
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email cannot be empty");
@@ -21,31 +50,76 @@ public class AuthService {
         if (!isValidEmail(email.trim())) {
             throw new IllegalArgumentException("Please enter a valid email address");
         }
-        
+
         if (password == null || password.trim().isEmpty()) {
             throw new IllegalArgumentException("Password cannot be empty");
         }
-        
+
         // Name is optional - use email prefix if not provided
         if (name == null || name.trim().isEmpty()) {
             name = email.split("@")[0]; // Use part before @ as default name
         }
-        
-        // Check if email already exists
+
+        email = email.trim().toLowerCase();
+
+        // Check if email already exists (both regular and OAuth users)
         if (userDAO.emailExists(email)) {
             throw new IllegalArgumentException("Email already exists");
         }
-        
+
         // Validate password strength
         if (!PasswordUtil.isValidPassword(password)) {
             throw new IllegalArgumentException("Password must be at least 6 characters with at least one letter and one number");
         }
-        
-        // Create user object
-        User user = new User(email.trim().toLowerCase(), PasswordUtil.hashPassword(password), name.trim());
-        
-        // Save to database
-        return userDAO.saveUser(user);
+
+        // Check if there's already a pending signup for this email and remove it
+        final String finalEmail = email;
+        pendingSignups.entrySet().removeIf(entry -> entry.getValue().getEmail().equals(finalEmail));
+
+        // Create pending signup (account not created yet)
+        PendingSignup pendingSignup = new PendingSignup(email, PasswordUtil.hashPassword(password), name.trim());
+        pendingSignups.put(pendingSignup.getVerificationToken(), pendingSignup);
+
+        // Return verification token for email verification
+        return pendingSignup.getVerificationToken();
+    }
+
+    public boolean completeSignup(String verificationToken) {
+        PendingSignup pending = pendingSignups.get(verificationToken);
+
+        if (pending == null) {
+            return false; // Invalid or expired token
+        }
+
+        // Check if token is not too old (24 hours)
+        if (System.currentTimeMillis() - pending.getTimestamp() > 24 * 60 * 60 * 1000) {
+            pendingSignups.remove(verificationToken);
+            return false; // Token expired
+        }
+
+        // Double-check email doesn't exist (in case OAuth user was created meanwhile)
+        if (userDAO.emailExists(pending.getEmail())) {
+            pendingSignups.remove(verificationToken);
+            return false; // Email taken
+        }
+
+        // Create the actual user account
+        User user = new User();
+        user.setEmail(pending.getEmail());
+        user.setPasswordHash(pending.getPasswordHash());
+        user.setName(pending.getName());
+        user.setEmailVerified(true); // Mark as verified since they completed the process
+
+        boolean success = userDAO.saveUser(user);
+
+        // Remove from pending signups
+        pendingSignups.remove(verificationToken);
+
+        return success;
+    }
+
+    public PendingSignup getPendingSignup(String verificationToken) {
+        return pendingSignups.get(verificationToken);
     }
 
     private boolean isValidEmail(String email) {

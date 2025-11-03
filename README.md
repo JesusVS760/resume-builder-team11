@@ -60,4 +60,3 @@ SELECT * FROM oauth_users;
 .quit
 
 
-

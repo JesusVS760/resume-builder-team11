@@ -22,6 +22,17 @@ public class Constants {
         public static final String GITHUB_CLIENT_SECRET = DotEnvLoader.get("GITHUB_CLIENT_SECRET", "your-github-oauth-client-secret");
     }
 
+    // Email Configuration - LOADED FROM ENVIRONMENT VARIABLES
+    public static final class Email {
+        // Gmail SMTP configuration for email verification
+        public static final String SMTP_HOST = "smtp.gmail.com";
+        public static final String SMTP_PORT = "587";
+        public static final String USERNAME = DotEnvLoader.get("EMAIL_USERNAME", "your-email@gmail.com");
+        public static final String APP_PASSWORD = DotEnvLoader.get("EMAIL_APP_PASSWORD", "your-app-password");
+        public static final String FROM_EMAIL = DotEnvLoader.get("FROM_EMAIL", "your-email@gmail.com");
+        public static final String FROM_NAME = "Resume Builder";
+    }
+
     // Session management
     public static class Session {
         private static User currentUser = null;

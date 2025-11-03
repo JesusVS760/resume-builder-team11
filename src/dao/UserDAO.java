@@ -13,18 +13,23 @@ public class UserDAO {
     }
 
     public boolean saveUser(User user) {
-        String sql = "INSERT INTO users (email, password_hash, name, email_verified, text_verified) VALUES (?, ?, ?, ?, ?)";
+        // Generate the next available user ID
+        String userId = getNextUserId();
+        user.setId(userId); // Set the generated ID on the user object
+
+        String sql = "INSERT INTO users (id, email, password_hash, name, email_verified, text_verified) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, user.getEmail());
-            ps.setString(2, user.getPasswordHash());
-            ps.setString(3, user.getName());
+            ps.setString(1, userId);
+            ps.setString(2, user.getEmail());
+            ps.setString(3, user.getPasswordHash());
+            ps.setString(4, user.getName());
 
             // Convert booleans to integers (0 or 1)
-            ps.setInt(4, user.isEmailVerified() ? 1 : 0);
-            ps.setInt(5, user.isTextVerified() ? 1 : 0);
+            ps.setInt(5, user.isEmailVerified() ? 1 : 0);
+            ps.setInt(6, user.isTextVerified() ? 1 : 0);
 
             int rowsAffected = ps.executeUpdate();
             return rowsAffected > 0;
@@ -36,21 +41,25 @@ public class UserDAO {
     }
 
 
-    private int getNextUserId() {
-        String sql = "SELECT COUNT(*) FROM users WHERE id LIKE 'U%'";
+    private String getNextUserId() {
+        String sql = "SELECT id FROM users WHERE id LIKE 'U%' ORDER BY CAST(SUBSTR(id, 2) AS INTEGER) DESC LIMIT 1";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return rs.getInt(1) + 1; // Next available number
+                String lastId = rs.getString(1);
+                // Extract the number from "U123" -> 123, then add 1
+                int lastNumber = Integer.parseInt(lastId.substring(1));
+                int nextNumber = lastNumber + 1;
+                return "U" + nextNumber;
             }
 
         } catch (SQLException e) {
             System.err.println("Error getting next user ID: " + e.getMessage());
         }
-        return 1; // Default to 1 if error
+        return "U1"; // Default to U1 if no users exist or error
     }
 
     public User findByEmail(String email) {

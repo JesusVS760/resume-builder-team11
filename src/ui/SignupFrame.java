@@ -303,32 +303,28 @@ public class SignupFrame extends JFrame {
         }
 
         try {
-            // Attempt to create account
-            boolean success = authService.signup(email, password, "");
+            // Initiate signup process (doesn't create account yet)
+            String verificationToken = authService.initiateSignup(email, password, "");
 
-            if (success) {
-                // Show success message
-                JOptionPane.showMessageDialog(this,
-                        "Account created successfully!\nPlease verify your email to continue.",
-                        "Verification Required",
-                        JOptionPane.INFORMATION_MESSAGE);
+            // Show verification required message
+            JOptionPane.showMessageDialog(this,
+                    "Please check your email for a verification code to complete your account creation.",
+                    "Verification Required",
+                    JOptionPane.INFORMATION_MESSAGE);
 
-                // Create user object for verification
-                User newUser = new User();
-                newUser.setEmail(email);
-                // Extract name from email (part before @)
-                String name = email.substring(0, email.indexOf('@'));
-                newUser.setName(name);
+            // Create user object for verification (using pending signup data)
+            services.AuthService.PendingSignup pending = authService.getPendingSignup(verificationToken);
+            User pendingUser = new User();
+            pendingUser.setEmail(pending.getEmail());
+            pendingUser.setName(pending.getName());
+            // Store verification token for later use
+            pendingUser.setVerificationCode(verificationToken);
 
-                // Open verification frame
-                new VerificationFrame(newUser).setVisible(true);
+            // Open verification frame with auto-send code enabled
+            new VerificationFrame(pendingUser, true).setVisible(true);
 
-                // Close signup frame
-                this.dispose();
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to create account. Email may already be in use.",
-                        "Sign Up Failed", JOptionPane.ERROR_MESSAGE);
-            }
+            // Close signup frame
+            this.dispose();
 
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage(),

@@ -6,16 +6,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import utils.Constants;
 
 public class TwilioService {
 
-    // Gmail SMTP configuration
-    private static final String SMTP_HOST = "smtp.gmail.com";
-    private static final String SMTP_PORT = "587";
-    private static final String EMAIL_USERNAME = System.getProperty("EMAIL_USERNAME");
-    private static final String EMAIL_PASSWORD = System.getProperty("EMAIL_APP_PASSWORD");
-    private static final String FROM_EMAIL = System.getProperty("FROM_EMAIL");
-    private static final String FROM_NAME = "Resume Builder";
+    // Gmail SMTP configuration - loaded from environment variables
+    private static final String SMTP_HOST = Constants.Email.SMTP_HOST;
+    private static final String SMTP_PORT = Constants.Email.SMTP_PORT;
+    private static final String EMAIL_USERNAME = Constants.Email.USERNAME;
+    private static final String EMAIL_PASSWORD = Constants.Email.APP_PASSWORD;
+    private static final String FROM_EMAIL = Constants.Email.FROM_EMAIL;
+    private static final String FROM_NAME = Constants.Email.FROM_NAME;
 
     // In production, store codes in a database, NOT in memory
     // This is a temporary in-memory storage (codes disappear when app closes)
@@ -29,32 +30,48 @@ public class TwilioService {
 
     // Initialize email session and storage when TwilioService is created
     public TwilioService() {
-        // Configure Gmail SMTP properties
-        Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", SMTP_HOST);
-        props.put("mail.smtp.port", SMTP_PORT);
-        props.put("mail.smtp.ssl.trust", SMTP_HOST);
-        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        // Check if email credentials are configured
+        if (EMAIL_USERNAME == null || EMAIL_USERNAME.isEmpty() ||
+            EMAIL_PASSWORD == null || EMAIL_PASSWORD.isEmpty() ||
+            FROM_EMAIL == null || FROM_EMAIL.isEmpty()) {
+            System.err.println("⚠️  WARNING: Email credentials not configured!");
+            System.err.println("Please set EMAIL_USERNAME, EMAIL_APP_PASSWORD, and FROM_EMAIL in your .env file");
+            System.err.println("Email verification will not work until credentials are configured.");
+            this.emailSession = null;
+        } else {
+            // Configure Gmail SMTP properties
+            Properties props = new Properties();
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.host", SMTP_HOST);
+            props.put("mail.smtp.port", SMTP_PORT);
+            props.put("mail.smtp.ssl.trust", SMTP_HOST);
+            props.put("mail.smtp.ssl.protocols", "TLSv1.2");
 
-        // Create email session with authentication
-        this.emailSession = Session.getInstance(props, new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(EMAIL_USERNAME, EMAIL_PASSWORD);
-            }
-        });
-       // test
+            // Create email session with authentication
+            this.emailSession = Session.getInstance(props, new Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(EMAIL_USERNAME, EMAIL_PASSWORD);
+                }
+            });
+
+            System.out.println("✓ TwilioService initialized with Gmail SMTP for: " + EMAIL_USERNAME);
+        }
+
         // Create storage for verification codes
         this.verificationCodes = new HashMap<>();
         this.codeTimestamps = new HashMap<>();
-
-        System.out.println("TwilioService initialized with Gmail SMTP");
     }
 
     public boolean sendVerificationCode(String emailAddress) {
         try {
+            // Check if email service is configured
+            if (emailSession == null) {
+                System.err.println("❌ Email service not configured. Please check your .env file for EMAIL_USERNAME, EMAIL_APP_PASSWORD, and FROM_EMAIL");
+                return false;
+            }
+
             // Validate email format
             if (!isValidEmail(emailAddress)) {
                 System.out.println("Invalid email format: " + emailAddress);

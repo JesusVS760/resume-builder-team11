@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import services.TwilioService;
+import services.AuthService;
 import models.User;
 
 public class VerificationFrame extends JFrame {
@@ -21,20 +22,32 @@ public class VerificationFrame extends JFrame {
     private static final Color NAVY_BLUE = new Color(30, 58, 138); // Updated background color
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
     private static final Color GREEN = new Color(34, 139, 34);
+    private static final Color BRIGHT_GREEN = new Color(0, 180, 0); // Stronger green for hover
     private static final Color WHITE = Color.WHITE;
 
     private TwilioService twilioService; // service that sends email codes
     private User currentUser; // user trying to verify their email
     private boolean codeWasSent;
+    private boolean autoSendCode; // whether to automatically send code on startup
 
     public VerificationFrame(User user) {
+        this(user, false); // Default: don't auto-send code
+    }
+
+    public VerificationFrame(User user, boolean autoSendCode) {
         this.currentUser = user;
         this.twilioService = new TwilioService();
         this.codeWasSent = false;
+        this.autoSendCode = autoSendCode;
         initializeFrame();                          // Set up the window basics
         createComponents();                         // Create all the UI elements
         layoutComponents();                         // Arrange them on the screen
         setupEventListeners();
+
+        // Auto-send code if requested (for signup flow)
+        if (autoSendCode && user.getEmail() != null && !user.getEmail().isEmpty()) {
+            SwingUtilities.invokeLater(() -> autoSendVerificationCode());
+        }
     }
 
     private void initializeFrame() {
@@ -55,25 +68,26 @@ public class VerificationFrame extends JFrame {
         titleLabel.setForeground(WHITE);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // EMAIL ADDRESS LABEL & INPUT FIELDS
+        // Only create email fields and send button if not auto-sending
+        if (!autoSendCode) {
+            // EMAIL ADDRESS LABEL & INPUT FIELDS
+            emailLabel = new JLabel("Email Address:");
+            emailLabel.setForeground(WHITE);
+            emailLabel.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        emailLabel = new JLabel("Email Address:");
-        emailLabel.setForeground(WHITE);
-        emailLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+            emailField = new JTextField(20);
+            emailField.setFont(new Font("Arial", Font.PLAIN, 14));
+            emailField.setPreferredSize(new Dimension(250, 30));
+            emailField.setToolTipText("Enter your email address");
 
-        emailField = new JTextField(20);
-        emailField.setFont(new Font("Arial", Font.PLAIN, 14));
-        emailField.setPreferredSize(new Dimension(250, 30));
-        emailField.setToolTipText("Enter your email address");
-
-        // SEND CODE BUTTON
-
-        sendCodeButton = new JButton("Send Code");
-        sendCodeButton.setBackground(LIGHT_BLUE);
-        sendCodeButton.setForeground(NAVY_BLUE);
-        sendCodeButton.setFont(new Font("Arial", Font.BOLD, 14));
-        sendCodeButton.setPreferredSize(new Dimension(150, 35));
-        sendCodeButton.setFocusPainted(false);
+            // SEND CODE BUTTON
+            sendCodeButton = new JButton("Send Code");
+            sendCodeButton.setBackground(LIGHT_BLUE);
+            sendCodeButton.setForeground(NAVY_BLUE);
+            sendCodeButton.setFont(new Font("Arial", Font.BOLD, 14));
+            sendCodeButton.setPreferredSize(new Dimension(150, 35));
+            sendCodeButton.setFocusPainted(false);
+        }
 
         // VERIFICATION CODE LABEL & TEXT FIELD
         codeLabel = new JLabel("Verification Code:");
@@ -98,7 +112,11 @@ public class VerificationFrame extends JFrame {
 
         // STATUS LABEL
 
-        statusLabel = new JLabel("Enter your email address and click 'Send Code'");
+        if (autoSendCode) {
+            statusLabel = new JLabel(""); // Start empty, will show message after code is sent
+        } else {
+            statusLabel = new JLabel("Enter your email address and click 'Send Code'");
+        }
         statusLabel.setForeground(LIGHT_BLUE);
         statusLabel.setFont(new Font("Arial", Font.ITALIC, 12));
         statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -123,33 +141,44 @@ public class VerificationFrame extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
 
-        // Email Label
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        centerPanel.add(emailLabel, gbc);
+        int currentRow = 0;
 
-        // Email Input Field
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        centerPanel.add(emailField, gbc);
+        // Only add email fields and send button if not auto-sending
+        if (!autoSendCode) {
+            // Email Label
+            gbc.gridx = 0;
+            gbc.gridy = currentRow;
+            gbc.anchor = GridBagConstraints.WEST;
+            centerPanel.add(emailLabel, gbc);
 
-        // Send Code Button
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        gbc.fill = GridBagConstraints.CENTER;
-        centerPanel.add(sendCodeButton, gbc);
+            // Email Input Field
+            gbc.gridx = 1;
+            gbc.gridy = currentRow;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            centerPanel.add(emailField, gbc);
 
-        // Spacer (empty row for spacing)
-        gbc.gridy = 2;
-        gbc.insets = new Insets(20, 10, 20, 10);
-        centerPanel.add(new JLabel(""), gbc);
+            currentRow++;
+
+            // Send Code Button
+            gbc.gridx = 0;
+            gbc.gridy = currentRow;
+            gbc.gridwidth = 2;
+            gbc.fill = GridBagConstraints.CENTER;
+            centerPanel.add(sendCodeButton, gbc);
+
+            currentRow++;
+
+            // Spacer (empty row for spacing)
+            gbc.gridy = currentRow;
+            gbc.insets = new Insets(20, 10, 20, 10);
+            centerPanel.add(new JLabel(""), gbc);
+
+            currentRow++;
+        }
 
         // Code Label
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = currentRow;
         gbc.gridwidth = 1;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(10, 10, 10, 10);
@@ -157,13 +186,15 @@ public class VerificationFrame extends JFrame {
 
         // Code Input Field
         gbc.gridx = 1;
-        gbc.gridy = 3;
+        gbc.gridy = currentRow;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         centerPanel.add(codeField, gbc);
 
+        currentRow++;
+
         // Verification Button
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = currentRow;
         gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.CENTER;
         centerPanel.add(verifyButton, gbc);
@@ -183,12 +214,15 @@ public class VerificationFrame extends JFrame {
     }
 
     private void setupEventListeners() {
-        sendCodeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                handleSendCode(); // send code
-            }
-        });
+        // Only add send code button listener if it exists (not in auto-send mode)
+        if (!autoSendCode) {
+            sendCodeButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    handleSendCode(); // send code
+                }
+            });
+        }
 
         verifyButton.addActionListener(new ActionListener() {
             @Override
@@ -196,6 +230,50 @@ public class VerificationFrame extends JFrame {
                 handleVerifyCode();  // Verify the code user entered
             }
         });
+
+        // Add hover animation to verify button (turns bright green on hover)
+        Color originalColor = verifyButton.getBackground();
+        verifyButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                verifyButton.setBackground(BRIGHT_GREEN); // Stronger green glow
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                verifyButton.setBackground(originalColor);
+            }
+        });
+    }
+
+    private void autoSendVerificationCode() {
+        String email = currentUser.getEmail();
+
+        if (email == null || email.isEmpty()) {
+            showError("No email address available for verification");
+            return;
+        }
+
+        try {
+            updateStatus("Sending verification code to " + email + "...", LIGHT_BLUE);
+
+            // Ask TwilioService to send email code
+            boolean codeSent = twilioService.sendVerificationCode(email);
+
+            if (codeSent) {
+                codeWasSent = true;
+                codeField.setEditable(true);
+                verifyButton.setEnabled(true);
+                updateStatus("Verification code sent! Check your email inbox.", GREEN);
+
+                // Focus on code field for convenience
+                codeField.requestFocus();
+            } else {
+                showError("Failed to send verification code! Please try again.");
+            }
+        } catch (Exception e) {
+            showError("Error: " + e.getMessage());
+        }
     }
 
     private void handleSendCode() {
@@ -260,29 +338,35 @@ public class VerificationFrame extends JFrame {
             boolean isValid = twilioService.verifyCode(enteredCode);
 
             if (isValid) {
-                // Success - email is verified
-                updateStatus("Email verified successfully!", GREEN);
-                showSuccess("Your email has been verified!\n\nYou can now log in to your account.");
+                // Complete the signup process (create the actual account)
+                AuthService authService = new AuthService();
+                boolean accountCreated = authService.completeSignup(currentUser.getVerificationCode());
 
-                // Store that this user's email is verified
-                currentUser.setPhoneVerified(true); // You might want to rename this to setEmailVerified()
+                if (accountCreated) {
+                    // Success - account created and email verified
+                    updateStatus("Account created successfully!", GREEN);
+                    showSuccess("Your account has been created!\n\nYou can now log in to your account.");
 
-                // Disable all inputs
-                verifyButton.setEnabled(false);
-                codeField.setEditable(false);
+                    // Disable all inputs
+                    verifyButton.setEnabled(false);
+                    codeField.setEditable(false);
 
-                // Close this window and open login frame after a short delay
-                Timer timer = new Timer(1500, new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        // Open login frame
-                        new LoginFrame().setVisible(true);
-                        // Close verification frame
-                        dispose();
-                    }
-                });
-                timer.setRepeats(false);
-                timer.start();
+                    // Close this window and open login frame after a short delay
+                    Timer timer = new Timer(1500, new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            // Open login frame
+                            new LoginFrame().setVisible(true);
+                            // Close verification frame
+                            dispose();
+                        }
+                    });
+                    timer.setRepeats(false);
+                    timer.start();
+                } else {
+                    // Failed to create account
+                    showError("Failed to create account. The verification link may have expired or email is already in use.");
+                }
             } else {
                 // Failed - code was wrong
                 showError("Invalid verification code. Please try again.");

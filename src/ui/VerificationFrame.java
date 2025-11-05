@@ -19,8 +19,8 @@ public class VerificationFrame extends JFrame {
     private JLabel codeLabel;
     private JLabel statusLabel;
 
-    private static final Color NAVY_BLUE = new Color(30, 58, 138); // Updated background color
-    private static final Color LIGHT_BLUE = new Color(173, 216, 230);
+    private static final Color NAVY_BLUE = new Color(0x1f2937); // Updated background color
+    private static final Color LIGHT_BLUE = new Color(0x374151);
     private static final Color GREEN = new Color(34, 139, 34);
     private static final Color BRIGHT_GREEN = new Color(0, 180, 0); // Stronger green for hover
     private static final Color WHITE = Color.WHITE;

@@ -71,21 +71,19 @@ public class UploadPanel extends JPanel {
 
             try {
                 parsedResumeText = parser.parseResume(f);
-                // ✅ TEMPORARY TEST POPUP
+
+                JTextArea textArea = new JTextArea(parsedResumeText, 20, 50);
+                textArea.setEditable(false);
+                textArea.setLineWrap(true);
+                textArea.setWrapStyleWord(true);
+                JScrollPane scrollPane = new JScrollPane(textArea);
+
                 JOptionPane.showMessageDialog(
                         this,
-                        parsedResumeText.substring(0, Math.min(500, parsedResumeText.length())),
+                        scrollPane,
                         "Parsed Resume Preview",
                         JOptionPane.INFORMATION_MESSAGE
                 );
-
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Resume parsed successfully!",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
-
             } catch (Exception ex) {
                 parsedResumeText = "";
                 JOptionPane.showMessageDialog(

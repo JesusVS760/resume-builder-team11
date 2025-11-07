@@ -13,9 +13,15 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.BiConsumer;
 
+import services.ResumeParserService;
+
 public class UploadPanel extends JPanel {
 
     private static final Set<String> ALLOWED = Set.of("pdf", "doc", "docx");
+
+    // Resume parser + extracted text storage
+    private final ResumeParserService parser = new ResumeParserService();
+    private String parsedResumeText = "";
 
     // Job description card
     private final JTextArea jobArea = new JTextArea(12, 28);
@@ -55,25 +61,54 @@ public class UploadPanel extends JPanel {
         south.add(buildBtn);
         add(south, BorderLayout.SOUTH);
 
-        // Wire up interactions
+        // Build button action
         buildBtn.addActionListener(e -> onBuild.accept(selectedFile, getJobDescription()));
         buildBtn.setEnabled(false);
 
+        // Handle file drop/selection → parse resume
         dropCard.setOnFileDropped(f -> {
             selectedFile = f;
+
+            try {
+                parsedResumeText = parser.parseResume(f);
+                // ✅ TEMPORARY TEST POPUP
+                JOptionPane.showMessageDialog(
+                        this,
+                        parsedResumeText.substring(0, Math.min(500, parsedResumeText.length())),
+                        "Parsed Resume Preview",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Resume parsed successfully!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+            } catch (Exception ex) {
+                parsedResumeText = "";
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to parse resume: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+
             onFileDropped.accept(f);
             updateBuildButtonEnabled();
         });
     }
 
+    // Public API
+
     public String getJobDescription() {
         return jobArea.getText().trim();
     }
 
-    public void setJobDescription(String text) {
-        jobArea.setText(text != null ? text : "");
-        updateCounter();
-        updateBuildButtonEnabled();
+    public String getParsedResumeText() {
+        return parsedResumeText;
     }
 
     public void setOnFileDropped(Consumer<File> handler) {
@@ -158,7 +193,6 @@ public class UploadPanel extends JPanel {
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setFont(b.getFont().deriveFont(Font.BOLD, 13f));
 
-        // Simple rollover press feedback (optional)
         b.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseEntered(java.awt.event.MouseEvent e) {
                 b.setBackground(navy.darker());
@@ -198,7 +232,9 @@ public class UploadPanel extends JPanel {
         return outer;
     }
 
-    // Drag and drop
+    // ─────────────────────────────────────────────────────────
+    // Drag & Drop Zone
+    // ─────────────────────────────────────────────────────────
     private class DropZoneCard extends JPanel {
         private final JLabel title = new JLabel("Drag & drop your resume here");
         private final JLabel subtitle = new JLabel("(PDF, DOC, DOCX)");
@@ -219,7 +255,7 @@ public class UploadPanel extends JPanel {
             subtitle.setForeground(new Color(90, 95, 110));
             subtitle.setHorizontalAlignment(SwingConstants.CENTER);
 
-            hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 12f));
+            hint.setFont(hint.getFont().deriveFont(12f));
             hint.setForeground(new Color(120, 125, 140));
             hint.setHorizontalAlignment(SwingConstants.CENTER);
 
@@ -253,23 +289,34 @@ public class UploadPanel extends JPanel {
                         @SuppressWarnings("unchecked")
                         List<File> files = (List<File>) support.getTransferable()
                                 .getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor);
+
                         if (files == null || files.isEmpty()) return false;
                         File f = files.get(0);
+
                         if (!isAllowed(f)) {
-                            JOptionPane.showMessageDialog(UploadPanel.this,
+                            JOptionPane.showMessageDialog(
+                                    UploadPanel.this,
                                     "Please drop a PDF, DOC, or DOCX file.",
-                                    "Unsupported file", JOptionPane.WARNING_MESSAGE);
+                                    "Unsupported file",
+                                    JOptionPane.WARNING_MESSAGE
+                            );
                             return false;
                         }
+
                         onFileDropped.accept(f);
                         showSuccess(f);
                         return true;
+
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        JOptionPane.showMessageDialog(UploadPanel.this,
+                        JOptionPane.showMessageDialog(
+                                UploadPanel.this,
                                 "Failed to import file: " + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                                "Error",
+                                JOptionPane.ERROR_MESSAGE
+                        );
                         return false;
+
                     } finally {
                         dragActive = false;
                         repaint();
@@ -277,7 +324,7 @@ public class UploadPanel extends JPanel {
                 }
             });
 
-            // Subtle highlight when dragging over
+            // Highlight on drag
             new DropTarget(this, new DropTargetAdapter() {
                 @Override public void dragEnter(DropTargetDragEvent dtde) { dragActive = true; repaint(); }
                 @Override public void dragExit(DropTargetEvent dte) { dragActive = false; repaint(); }
@@ -303,14 +350,19 @@ public class UploadPanel extends JPanel {
             fc.setAcceptAllFileFilterUsed(false);
             fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
                     "Resume files (PDF, DOC, DOCX)", "pdf", "doc", "docx"));
+
             if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 File f = fc.getSelectedFile();
                 if (!isAllowed(f)) {
-                    JOptionPane.showMessageDialog(this,
+                    JOptionPane.showMessageDialog(
+                            this,
                             "Please choose a PDF, DOC, or DOCX file.",
-                            "Unsupported file", JOptionPane.WARNING_MESSAGE);
+                            "Unsupported file",
+                            JOptionPane.WARNING_MESSAGE
+                    );
                     return;
                 }
+
                 onFileDropped.accept(f);
                 showSuccess(f);
             }
@@ -328,9 +380,12 @@ public class UploadPanel extends JPanel {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setColor(new Color(100, 140, 255, 60));
             var r = getInsets();
-            g2.fillRoundRect(r.left, r.top,
+            g2.fillRoundRect(
+                    r.left, r.top,
                     getWidth() - r.left - r.right,
-                    getHeight() - r.top - r.bottom, 16, 16);
+                    getHeight() - r.top - r.bottom,
+                    16, 16
+            );
             g2.dispose();
         }
     }

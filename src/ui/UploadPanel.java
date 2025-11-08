@@ -1,5 +1,8 @@
 package ui;
 
+import services.ResumeTailoringService;
+import services.ResumeParserService;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
@@ -8,6 +11,7 @@ import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.*;
 import java.io.File;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -36,7 +40,15 @@ public class UploadPanel extends JPanel {
 
     private File selectedFile;
 
+    // Services for tailoring
+    private ResumeTailoringService tailoringService;
+    private ResumeParserService parserService;
+
     public UploadPanel() {
+        // Initialize services
+        tailoringService = new ResumeTailoringService();
+        parserService = new ResumeParserService();
+
         setLayout(new BorderLayout());
         setBackground(BG_WHITE);
 
@@ -224,15 +236,73 @@ public class UploadPanel extends JPanel {
             onParseListener.actionPerformed(new java.awt.event.ActionEvent(this, 0, "parse"));
             return;
         }
-        if (onBuild == null) {
-            showWarn("No build handler attached.", "Not wired");
-            return;
-        }
+
+        // Default behavior: use tailoring service
         if (selectedFile == null) {
             showWarn("Please select or drop a resume file first.", "No file selected");
             return;
         }
-        onBuild.accept(selectedFile, getJobDescription());
+
+        String jobDesc = getJobDescription();
+        if (jobDesc == null || jobDesc.trim().isEmpty()) {
+            showWarn("Please enter a job description.", "No job description");
+            return;
+        }
+
+        // Process in background thread
+        setBusy(true);
+        setStatus("Processing resume...");
+
+        new SwingWorker<String, Void>() {
+            @Override
+            protected String doInBackground() throws Exception {
+                // Parse resume completely with all sections
+                setStatus("Parsing resume...");
+                ResumeParserService.ParsedResume parsed = parserService.parseResumeComplete(selectedFile);
+
+                // Tailor resume
+                setStatus("Tailoring resume...");
+                String tailored = tailoringService.tailorResume(parsed, jobDesc);
+
+                return tailored;
+            }
+
+            @Override
+            protected void done() {
+                setBusy(false);
+                try {
+                    String result = get();
+
+                    // Display results in a dialog
+                    JTextArea resultArea = new JTextArea(result);
+                    resultArea.setEditable(false);
+                    resultArea.setLineWrap(true);
+                    resultArea.setWrapStyleWord(true);
+                    resultArea.setCaretPosition(0);
+
+                    JScrollPane scrollPane = new JScrollPane(resultArea);
+                    scrollPane.setPreferredSize(new Dimension(700, 500));
+
+                    JOptionPane.showMessageDialog(
+                            UploadPanel.this,
+                            scrollPane,
+                            "Tailored Resume Result",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+
+                    setStatus("Resume tailored successfully!");
+
+                } catch (Exception ex) {
+                    showError("Failed to tailor resume: " + ex.getMessage(), "Error");
+                    setStatus("Failed to tailor resume");
+                }
+            }
+        }.execute();
+
+        // If onBuild handler is set, also call it
+        if (onBuild != null) {
+            onBuild.accept(selectedFile, jobDesc);
+        }
     }
 
     private void pasteFromClipboard() {

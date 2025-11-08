@@ -1,7 +1,7 @@
 package ui;
 
 import javax.swing.*;
-import javax.swing.border.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
@@ -9,382 +9,325 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.*;
 import java.io.File;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.BiConsumer;
-
-import services.ResumeParserService;
+import java.util.function.Consumer;
 
 public class UploadPanel extends JPanel {
 
-    private static final Set<String> ALLOWED = Set.of("pdf", "doc", "docx");
+    private static final Color BG_WHITE       = Color.WHITE;
+    private static final Color TEXT_PRIMARY   = new Color(0x111111);
+    private static final Color TEXT_MUTED     = new Color(0x666666);
+    private static final Color BORDER_NEUTRAL = new Color(0xD0D7DE);
+    private static final Color ACCENT         = new Color(0x2563EB);
 
-    // Resume parser + extracted text storage
-    private final ResumeParserService parser = new ResumeParserService();
-    private String parsedResumeText = "";
+    private DropArea dropArea;
+    private JTextArea jobDescArea;
 
-    // Job description card
-    private final JTextArea jobArea = new JTextArea(12, 28);
-    private final JLabel counter = new JLabel("0 chars, 0 words");
+    private JButton buildButton;
+    private JLabel  fileLabel;
+    private JProgressBar progress;
 
-    // Build resume button
-    private final JButton buildBtn = new JButton("Build Tailored Resume");
-    private File selectedFile = null;
-    private BiConsumer<File, String> onBuild = (f, jd) -> {};
+    private JButton pasteButton;
+    private JButton clearButton;
 
-    private Consumer<File> onFileDropped = f -> {};
+    private Consumer<File> onFileDropped;
+    private BiConsumer<File, String> onBuild;
+    private java.awt.event.ActionListener onParseListener;
+
+    private File selectedFile;
 
     public UploadPanel() {
-        setOpaque(true);
-        setBackground(new Color(246, 248, 250));
         setLayout(new BorderLayout());
+        setBackground(BG_WHITE);
 
-        // Drag & drop card
-        DropZoneCard dropCard = new DropZoneCard();
+        JPanel center = new JPanel(new GridLayout(1, 2, 24, 0));
+        center.setBackground(BG_WHITE);
+        center.setBorder(new EmptyBorder(24, 24, 0, 24));
+        add(center, BorderLayout.CENTER);
 
-        // Job description card
-        JPanel jdCard = buildJobDescriptionCard();
+        JPanel left = new JPanel(new BorderLayout());
+        left.setBackground(BG_WHITE);
 
-        // Makes the two cards perfectly split in half
-        JPanel halves = new JPanel(new GridLayout(1, 2, 16, 0)); // 16px gap
-        halves.setOpaque(false);
-        halves.add(wrapAsCard(dropCard));
-        halves.add(wrapAsCard(jdCard));
+        JLabel leftTitle = new JLabel("Resume file");
+        leftTitle.setBorder(new EmptyBorder(0, 0, 8, 0));
+        leftTitle.setForeground(TEXT_PRIMARY);
+        leftTitle.setFont(leftTitle.getFont().deriveFont(Font.BOLD, 14f));
+        left.add(leftTitle, BorderLayout.NORTH);
 
-        add(halves, BorderLayout.CENTER);
+        dropArea = new DropArea();
+        left.add(dropArea, BorderLayout.CENTER);
+        center.add(left);
 
-        // Build resume button
-        styleBuildButton(buildBtn);
-        JPanel south = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        south.setOpaque(false);
-        south.setBorder(new EmptyBorder(0, 24, 24, 24));
-        south.add(buildBtn);
+        JPanel right = new JPanel(new BorderLayout());
+        right.setBackground(BG_WHITE);
+
+        JPanel rightHeader = new JPanel(new BorderLayout());
+        rightHeader.setOpaque(false);
+
+        JLabel rightTitle = new JLabel("Job description");
+        rightTitle.setBorder(new EmptyBorder(0, 0, 8, 0));
+        rightTitle.setForeground(TEXT_PRIMARY);
+        rightTitle.setFont(rightTitle.getFont().deriveFont(Font.BOLD, 14f));
+        rightHeader.add(rightTitle, BorderLayout.WEST);
+
+        JPanel rightTools = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightTools.setOpaque(false);
+        pasteButton = new JButton("Paste");
+        clearButton = new JButton("Clear");
+        styleSecondary(pasteButton);
+        styleSecondary(clearButton);
+        pasteButton.addActionListener(e -> pasteFromClipboard());
+        clearButton.addActionListener(e -> jobDescArea.setText(""));
+        rightTools.add(pasteButton);
+        rightTools.add(clearButton);
+        rightHeader.add(rightTools, BorderLayout.EAST);
+
+        right.add(rightHeader, BorderLayout.NORTH);
+
+        jobDescArea = new JTextArea();
+        jobDescArea.setLineWrap(true);
+        jobDescArea.setWrapStyleWord(true);
+        jobDescArea.setForeground(TEXT_PRIMARY);
+        jobDescArea.setBackground(BG_WHITE);
+        jobDescArea.setCaretColor(TEXT_PRIMARY);
+        jobDescArea.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_NEUTRAL),
+                new EmptyBorder(8, 8, 8, 8)
+        ));
+
+        JScrollPane jdScroll = new JScrollPane(
+                jobDescArea,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        );
+        right.add(jdScroll, BorderLayout.CENTER);
+
+        JLabel charCount = new JLabel("0 characters");
+        charCount.setForeground(TEXT_MUTED);
+        charCount.setBorder(new EmptyBorder(6, 0, 0, 0));
+        right.add(charCount, BorderLayout.SOUTH);
+
+        jobDescArea.getDocument().addDocumentListener(new DocumentListener() {
+            private void update() {
+                int n = jobDescArea.getText() == null ? 0 : jobDescArea.getText().length();
+                charCount.setText(n + " characters");
+            }
+            @Override public void insertUpdate(DocumentEvent e) { update(); }
+            @Override public void removeUpdate(DocumentEvent e) { update(); }
+            @Override public void changedUpdate(DocumentEvent e) { update(); }
+        });
+
+        center.add(right);
+
+        JPanel south = new JPanel();
+        south.setBackground(BG_WHITE);
+        south.setBorder(new EmptyBorder(16, 24, 24, 24));
+        south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
+
+        fileLabel = new JLabel("No file selected");
+        fileLabel.setForeground(TEXT_MUTED);
+        fileLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        buildButton = new JButton("Build Tailored Resume");
+        buildButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        buildButton.addActionListener(e -> triggerBuild());
+        buildButton.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_NEUTRAL),
+                new EmptyBorder(10, 16, 10, 16)
+        ));
+        buildButton.setBackground(BG_WHITE);
+        buildButton.setFocusPainted(false);
+        buildButton.setOpaque(true);
+
+        progress = new JProgressBar(0, 100);
+        progress.setStringPainted(true);
+        progress.setForeground(ACCENT);
+        progress.setBackground(new Color(0xF3F4F6));
+        progress.setBorderPainted(false);
+        progress.setVisible(false);
+        progress.setAlignmentX(Component.CENTER_ALIGNMENT);
+        progress.setMaximumSize(new Dimension(360, 14));
+
+        south.add(fileLabel);
+        south.add(Box.createVerticalStrut(10));
+        south.add(buildButton);
+        south.add(Box.createVerticalStrut(10));
+        south.add(progress);
+
         add(south, BorderLayout.SOUTH);
 
-        // Build button action
-        buildBtn.addActionListener(e -> onBuild.accept(selectedFile, getJobDescription()));
-        buildBtn.setEnabled(false);
-
-        // Handle file drop/selection → parse resume
-        dropCard.setOnFileDropped(f -> {
-            selectedFile = f;
-
-            try {
-                parsedResumeText = parser.parseResume(f);
-
-                JTextArea textArea = new JTextArea(parsedResumeText, 20, 50);
-                textArea.setEditable(false);
-                textArea.setLineWrap(true);
-                textArea.setWrapStyleWord(true);
-                JScrollPane scrollPane = new JScrollPane(textArea);
-
-                JOptionPane.showMessageDialog(
-                        this,
-                        scrollPane,
-                        "Parsed Resume Preview",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
-            } catch (Exception ex) {
-                parsedResumeText = "";
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Failed to parse resume: " + ex.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE
-                );
+        new DropTarget(dropArea, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
+            @Override public void dragEnter(DropTargetDragEvent dtde) {
+                if (accepts(dtde)) { dtde.acceptDrag(DnDConstants.ACTION_COPY); dropArea.setHover(true); }
+                else { dtde.rejectDrag(); }
+                dropArea.repaint();
             }
-
-            onFileDropped.accept(f);
-            updateBuildButtonEnabled();
-        });
-    }
-
-    // Public API
-
-    public String getJobDescription() {
-        return jobArea.getText().trim();
-    }
-
-    public String getParsedResumeText() {
-        return parsedResumeText;
-    }
-
-    public void setOnFileDropped(Consumer<File> handler) {
-        this.onFileDropped = (handler != null) ? handler : f -> {};
-    }
-
-    /** Hook to handle the Build button click. */
-    public void setOnBuild(BiConsumer<File, String> handler) {
-        this.onBuild = (handler != null) ? handler : (f, jd) -> {};
-    }
-
-    // UI Builder
-
-    private JPanel buildJobDescriptionCard() {
-        JPanel card = new JPanel(new BorderLayout(8, 8));
-        card.setOpaque(false);
-
-        JLabel title = new JLabel("Enter Job Description");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
-
-        jobArea.setLineWrap(true);
-        jobArea.setWrapStyleWord(true);
-        jobArea.setFont(jobArea.getFont().deriveFont(13f));
-        jobArea.setBorder(new EmptyBorder(8, 8, 8, 8));
-
-        JScrollPane scroll = new JScrollPane(jobArea,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.setBorder(new LineBorder(new Color(200, 210, 220), 1, true));
-
-        // Buttons row
-        JButton paste = new JButton("Paste");
-        JButton clear = new JButton("Clear");
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(paste);
-        actions.add(clear);
-
-        // Counter + actions container
-        JPanel south = new JPanel(new BorderLayout());
-        south.setOpaque(false);
-        counter.setForeground(new Color(90, 95, 110));
-        south.add(counter, BorderLayout.WEST);
-        south.add(actions, BorderLayout.EAST);
-
-        // Wire actions
-        paste.addActionListener(e -> {
-            try {
-                var cb = Toolkit.getDefaultToolkit().getSystemClipboard();
-                var clip = cb.getData(DataFlavor.stringFlavor);
-                if (clip instanceof String s) {
-                    jobArea.replaceSelection(s);
+            @Override public void dragExit(DropTargetEvent dte) {
+                dropArea.setHover(false); dropArea.repaint();
+            }
+            @Override public void drop(DropTargetDropEvent dtde) {
+                dropArea.setHover(false);
+                if (!accepts(dtde)) { dtde.rejectDrop(); return; }
+                try {
+                    dtde.acceptDrop(DnDConstants.ACTION_COPY);
+                    List<File> files = (List<File>) dtde.getTransferable()
+                            .getTransferData(DataFlavor.javaFileListFlavor);
+                    if (files != null && !files.isEmpty()) setSelectedFile(files.get(0));
+                    dtde.dropComplete(true);
+                } catch (Exception ex) {
+                    dtde.dropComplete(false);
+                    showError("Couldn't read dropped file: " + ex.getMessage(), "Drop Failed");
                 }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Nothing to paste from clipboard.",
-                        "Paste", JOptionPane.INFORMATION_MESSAGE);
             }
-        });
-        clear.addActionListener(e -> jobArea.setText(""));
-
-        // Live counter + enable logic for Build button
-        jobArea.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { updateCounter(); updateBuildButtonEnabled(); }
-            public void removeUpdate(DocumentEvent e) { updateCounter(); updateBuildButtonEnabled(); }
-            public void changedUpdate(DocumentEvent e) { updateCounter(); updateBuildButtonEnabled(); }
-        });
-        updateCounter();
-
-        card.add(title, BorderLayout.NORTH);
-        card.add(scroll, BorderLayout.CENTER);
-        card.add(south, BorderLayout.SOUTH);
-        return card;
+        }, true, null);
     }
 
-    private void styleBuildButton(JButton b) {
-        Color navy = new Color(0x1f2937); // your app's navy
-        b.setBackground(navy);
-        b.setForeground(Color.WHITE);
+    public void setOnFileDropped(Consumer<File> c) { this.onFileDropped = c; }
+    public void setOnBuild(BiConsumer<File, String> c) { this.onBuild = c; }
+    public void setOnParse(java.awt.event.ActionListener l) { this.onParseListener = l; }
+
+    public File getSelectedFile() { return selectedFile; }
+    public void setSelectedFile(File f) {
+        this.selectedFile = f;
+        fileLabel.setText(f == null ? "No file selected" : f.getName());
+        if (f != null && onFileDropped != null) onFileDropped.accept(f);
+        repaint();
+    }
+
+    public String getJobDescription() { return jobDescArea.getText(); }
+    public void setJobDescription(String txt) { jobDescArea.setText(txt == null ? "" : txt); }
+
+    public void setBusy(boolean busy) {
+        progress.setIndeterminate(busy);
+        progress.setVisible(busy || progress.getValue() > 0);
+        buildButton.setEnabled(!busy);
+        dropArea.setEnabled(!busy);
+        jobDescArea.setEnabled(!busy);
+        pasteButton.setEnabled(!busy);
+        clearButton.setEnabled(!busy);
+    }
+
+    public void setProgressValue(int v) {
+        progress.setIndeterminate(false);
+        progress.setValue(Math.max(0, Math.min(100, v)));
+        progress.setVisible(v > 0 && v < 100);
+    }
+
+    public void setStatus(String text) { fileLabel.setText(text); }
+
+    public void showWarn(String msg, String title)  { JOptionPane.showMessageDialog(this, msg, title, JOptionPane.WARNING_MESSAGE); }
+    public void showError(String msg, String title) { JOptionPane.showMessageDialog(this, msg, title, JOptionPane.ERROR_MESSAGE); }
+    public void showInfo(String msg, String title)  { JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE); }
+
+    private void triggerBuild() {
+        if (onParseListener != null) {
+            onParseListener.actionPerformed(new java.awt.event.ActionEvent(this, 0, "parse"));
+            return;
+        }
+        if (onBuild == null) {
+            showWarn("No build handler attached.", "Not wired");
+            return;
+        }
+        if (selectedFile == null) {
+            showWarn("Please select or drop a resume file first.", "No file selected");
+            return;
+        }
+        onBuild.accept(selectedFile, getJobDescription());
+    }
+
+    private void pasteFromClipboard() {
+        try {
+            var cb = Toolkit.getDefaultToolkit().getSystemClipboard();
+            if (cb.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
+                String txt = (String) cb.getData(DataFlavor.stringFlavor);
+                if (txt != null) jobDescArea.replaceSelection(txt);
+            } else {
+                showWarn("No text available in clipboard.", "Paste");
+            }
+        } catch (Exception ex) {
+            showError("Paste failed: " + ex.getMessage(), "Paste");
+        }
+    }
+
+    private static boolean accepts(DropTargetDragEvent e) { return e.isDataFlavorSupported(DataFlavor.javaFileListFlavor); }
+    private static boolean accepts(DropTargetDropEvent e) { return e.isDataFlavorSupported(DataFlavor.javaFileListFlavor); }
+
+    private void styleSecondary(JButton b) {
+        b.setBackground(BG_WHITE);
+        b.setForeground(TEXT_PRIMARY);
         b.setFocusPainted(false);
-        b.setOpaque(true);
-        b.setBorder(new EmptyBorder(12, 20, 12, 20));
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setFont(b.getFont().deriveFont(Font.BOLD, 13f));
-
-        b.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
-                b.setBackground(navy.darker());
-            }
-            @Override public void mouseExited(java.awt.event.MouseEvent e) {
-                b.setBackground(navy);
-            }
-            @Override public void mousePressed(java.awt.event.MouseEvent e) {
-                b.setBackground(navy.darker().darker());
-            }
-            @Override public void mouseReleased(java.awt.event.MouseEvent e) {
-                b.setBackground(navy.darker());
-            }
-        });
-    }
-
-    private void updateCounter() {
-        String text = jobArea.getText();
-        int chars = text.length();
-        int words = (text.isBlank()) ? 0 : text.trim().split("\\s+").length;
-        counter.setText(chars + " chars, " + words + " words");
-    }
-
-    private void updateBuildButtonEnabled() {
-        boolean ok = (selectedFile != null) && !getJobDescription().isBlank();
-        buildBtn.setEnabled(ok);
-    }
-
-    private JComponent wrapAsCard(JComponent inner) {
-        JPanel outer = new JPanel(new BorderLayout());
-        outer.setOpaque(false);
-        outer.setBorder(new CompoundBorder(
-                new EmptyBorder(24, 24, 24, 24),
-                new LineBorder(new Color(200, 210, 220), 2, true)
+        b.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_NEUTRAL),
+                new EmptyBorder(6, 10, 6, 10)
         ));
-        outer.add(inner, BorderLayout.CENTER);
-        return outer;
+        b.setOpaque(true);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Drag & Drop Zone
-    // ─────────────────────────────────────────────────────────
-    private class DropZoneCard extends JPanel {
-        private final JLabel title = new JLabel("Drag & drop your resume here");
-        private final JLabel subtitle = new JLabel("(PDF, DOC, DOCX)");
-        private final JLabel hint = new JLabel("…or click to choose a file");
+    private class DropArea extends JPanel {
+        private boolean hover = false;
 
-        private Consumer<File> onFileDropped = f -> {};
-        private boolean dragActive = false;
-
-        DropZoneCard() {
-            setOpaque(false);
-            setLayout(new GridBagLayout());
+        DropArea() {
+            setOpaque(true);
+            setBackground(BG_WHITE);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-            title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
-            title.setHorizontalAlignment(SwingConstants.CENTER);
-
-            subtitle.setFont(subtitle.getFont().deriveFont(13f));
-            subtitle.setForeground(new Color(90, 95, 110));
-            subtitle.setHorizontalAlignment(SwingConstants.CENTER);
-
-            hint.setFont(hint.getFont().deriveFont(12f));
-            hint.setForeground(new Color(120, 125, 140));
-            hint.setHorizontalAlignment(SwingConstants.CENTER);
-
-            var g = new GridBagConstraints();
-            g.gridx = 0; g.gridy = 0; g.insets = new Insets(4, 4, 8, 4);
-            g.fill = GridBagConstraints.HORIZONTAL; g.anchor = GridBagConstraints.CENTER;
-            add(title, g);
-
-            g.gridy = 1; g.insets = new Insets(0, 4, 12, 4);
-            add(subtitle, g);
-
-            g.gridy = 2;
-            add(hint, g);
-
+            setBorder(new EmptyBorder(8, 8, 8, 8));
             addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                    chooseFileViaDialog();
+                    chooseFileWithDialog();
                 }
-            });
-
-            setTransferHandler(new TransferHandler() {
-                @Override public boolean canImport(TransferSupport support) {
-                    boolean fileList = support.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.javaFileListFlavor);
-                    support.setDropAction(COPY);
-                    return fileList;
-                }
-
-                @Override public boolean importData(TransferSupport support) {
-                    if (!canImport(support)) return false;
-                    try {
-                        @SuppressWarnings("unchecked")
-                        List<File> files = (List<File>) support.getTransferable()
-                                .getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor);
-
-                        if (files == null || files.isEmpty()) return false;
-                        File f = files.get(0);
-
-                        if (!isAllowed(f)) {
-                            JOptionPane.showMessageDialog(
-                                    UploadPanel.this,
-                                    "Please drop a PDF, DOC, or DOCX file.",
-                                    "Unsupported file",
-                                    JOptionPane.WARNING_MESSAGE
-                            );
-                            return false;
-                        }
-
-                        onFileDropped.accept(f);
-                        showSuccess(f);
-                        return true;
-
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        JOptionPane.showMessageDialog(
-                                UploadPanel.this,
-                                "Failed to import file: " + ex.getMessage(),
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE
-                        );
-                        return false;
-
-                    } finally {
-                        dragActive = false;
-                        repaint();
-                    }
-                }
-            });
-
-            // Highlight on drag
-            new DropTarget(this, new DropTargetAdapter() {
-                @Override public void dragEnter(DropTargetDragEvent dtde) { dragActive = true; repaint(); }
-                @Override public void dragExit(DropTargetEvent dte) { dragActive = false; repaint(); }
-                @Override public void drop(DropTargetDropEvent dtde) { dragActive = false; repaint(); }
             });
         }
 
-        void setOnFileDropped(Consumer<File> handler) {
-            this.onFileDropped = (handler != null) ? handler : f -> {};
+        void setHover(boolean h) { this.hover = h; }
+
+        @Override protected void paintComponent(Graphics g0) {
+            super.paintComponent(g0);
+            Graphics2D g = (Graphics2D) g0.create();
+            int w = getWidth(), h = getHeight();
+
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            g.setColor(BG_WHITE);
+            g.fillRoundRect(0, 0, w, h, 12, 12);
+
+            float[] dash = {8f, 8f};
+            g.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10f, dash, 0f));
+            g.setColor(hover ? ACCENT : BORDER_NEUTRAL);
+            g.drawRoundRect(1, 1, w - 2, h - 2, 12, 12);
+
+            g.setColor(TEXT_MUTED);
+            String t1 = "Drag & drop your resume";
+            String t2 = "or click to browse";
+            Font f1 = getFont().deriveFont(Font.BOLD, 16f);
+            Font f2 = getFont().deriveFont(Font.PLAIN, 13f);
+
+            g.setFont(f1);
+            int y = h / 2 - 6;
+            drawCentered(g, t1, w, y);
+
+            g.setFont(f2);
+            drawCentered(g, t2, w, y + 22);
+
+            g.dispose();
         }
 
-        private boolean isAllowed(File f) {
-            String name = f.getName();
-            int dot = name.lastIndexOf('.');
-            if (dot < 0) return false;
-            String ext = name.substring(dot + 1).toLowerCase();
-            return ALLOWED.contains(ext);
+        private void drawCentered(Graphics2D g, String s, int width, int y) {
+            FontMetrics fm = g.getFontMetrics();
+            int x = (width - fm.stringWidth(s)) / 2;
+            g.drawString(s, x, y);
         }
 
-        private void chooseFileViaDialog() {
-            JFileChooser fc = new JFileChooser();
-            fc.setDialogTitle("Choose resume");
-            fc.setAcceptAllFileFilterUsed(false);
-            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                    "Resume files (PDF, DOC, DOCX)", "pdf", "doc", "docx"));
-
-            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                File f = fc.getSelectedFile();
-                if (!isAllowed(f)) {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            "Please choose a PDF, DOC, or DOCX file.",
-                            "Unsupported file",
-                            JOptionPane.WARNING_MESSAGE
-                    );
-                    return;
-                }
-
-                onFileDropped.accept(f);
-                showSuccess(f);
+        private void chooseFileWithDialog() {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Choose a resume file");
+            chooser.setMultiSelectionEnabled(false);
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                    "Documents (*.pdf, *.doc, *.docx, *.txt)", "pdf", "doc", "docx", "txt"
+            ));
+            if (chooser.showOpenDialog(UploadPanel.this) == JFileChooser.APPROVE_OPTION) {
+                setSelectedFile(chooser.getSelectedFile());
             }
-        }
-
-        private void showSuccess(File f) {
-            title.setText("File selected:");
-            subtitle.setText(f.getName());
-            hint.setText("Drop a different file to replace it.");
-        }
-
-        @Override protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if (!dragActive) return;
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setColor(new Color(100, 140, 255, 60));
-            var r = getInsets();
-            g2.fillRoundRect(
-                    r.left, r.top,
-                    getWidth() - r.left - r.right,
-                    getHeight() - r.top - r.bottom,
-                    16, 16
-            );
-            g2.dispose();
         }
     }
 }

@@ -1,26 +1,15 @@
 package ui;
 
-import ui.LandingPanel;
-import ui.UploadPanel;
 import ui.widgets.HoverScaleButton;
 import ui.widgets.AnimatedCards;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Main container frame for the Resume Builder app.
- * - Left: navigation with animated buttons.
- * - Right: card stack (AnimatedCards) with HOME/BUILD/SAVED/SETTINGS/PROFILE views.
- *
- * Responsibilities:
- * 1) Build the UI (nav + cards)
- * 2) Wire navigation (including sticky "active" nav button)
- * 3) Handle login/logout transitions and profile panel updates
- */
 public class ResumeBuilderContainer extends JFrame {
 
     // Card Keys
@@ -40,7 +29,7 @@ public class ResumeBuilderContainer extends JFrame {
     private static final Color CARD_BG     = Color.GRAY;
     private static final Color CARD_FG     = Color.WHITE;
 
-    // The root panel and the cards
+    // Root + Cards
     private JPanel rootPanel;
     private AnimatedCards contentPanel;
     private JPanel homePanel;
@@ -56,30 +45,30 @@ public class ResumeBuilderContainer extends JFrame {
     private HoverScaleButton settingsButton;
     private HoverScaleButton profileButton;
 
-    // Just for the user to be able to know where they are
+    // Map card key -> button (for sticky/active state)
     private Map<String, HoverScaleButton> navButtons;
 
-    // Profile UI
+    // Profile UI bits
     private JLabel emailValueLabel;
     private JLabel nameValueLabel;
     private JButton logoutButton;
+
+    // Reference to inner UploadPanel for controllers
+    private UploadPanel uploadPanel;
 
     public ResumeBuilderContainer() {
         super("Resume Builder");
 
         initLookAndFeel();
-        buildUI();          // build UI structure (nav + cards + placeholders)
+        buildUI();
         setContentPane(rootPanel);
         setResizable(false);
 
-        // Style
         setCardBackgrounds(CARD_BG);
         styleNavButtons();
 
-        // Plug real content into the placeholder cards
         plugContent();
 
-        // Icon for profile if available (classpath first, then file fallback)
         ImageIcon profileIcon = loadScaledIcon(
                 "/ui/images/profilePic.png",
                 "src/ui/images/profilePic.png",
@@ -87,33 +76,54 @@ public class ResumeBuilderContainer extends JFrame {
         );
         if (profileIcon != null) profileButton.setIcon(profileIcon);
 
-        // When the user opens the program it defaults to the home page
         contentPanel.instantShow(CARD_HOME);
         setActiveNav(CARD_HOME);
         updateAuthUI();
 
-        // Nav actions
-        wireNavigationActions();
-
-        // focus behavior for the frame
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1280, 720);
         setLocationRelativeTo(null);
 
-        // After user logs in via LoginFrame, bring them to PROFILE when focus returns
         addWindowFocusListener(new java.awt.event.WindowFocusListener() {
             @Override public void windowGainedFocus(java.awt.event.WindowEvent e) {
-                if (utils.Constants.Session.justLoggedIn()) {
-                    updateProfilePanel();
-                    updateAuthUI();
-                    go(CARD_PROFILE);
-                }
+                try {
+                    if (utils.Constants.Session.justLoggedIn()) {
+                        updateProfilePanel();
+                        updateAuthUI();
+                        go(CARD_PROFILE);
+                    }
+                } catch (Throwable ignored) {}
             }
-            @Override public void windowLostFocus(java.awt.event.WindowEvent e) { /* no-op */ }
+            @Override public void windowLostFocus(java.awt.event.WindowEvent e) { }
         });
     }
 
-    // Lifecycle Helpers
+    public void setOnNavHome(ActionListener l)     { resumeBuilderButton.addActionListener(l); }
+    public void setOnNavBuild(ActionListener l)    { buildResumeButton.addActionListener(l); }
+    public void setOnNavSaved(ActionListener l)    { savedResumesButton.addActionListener(l); }
+    public void setOnNavSettings(ActionListener l) { settingsButton.addActionListener(l); }
+    public void setOnNavProfile(ActionListener l)  { profileButton.addActionListener(l); }
+
+    public void showHome()     { go(CARD_HOME); }
+    public void showBuild()    { go(CARD_BUILD); }
+    public void showSaved()    { go(CARD_SAVED); }
+    public void showSettings() { go(CARD_SETTINGS); }
+    public void showProfile()  { updateProfilePanel(); updateAuthUI(); go(CARD_PROFILE); }
+
+    public UploadPanel getUploadPanel() { return uploadPanel; }
+
+    public void updateAuthUIPublic() { updateAuthUI(); }
+
+    public void updateProfileView(models.User user) {
+        try {
+            if (user == null) return;
+            emailValueLabel.setText(user.getEmail());
+            nameValueLabel.setText(user.getName());
+            logoutButton.setVisible(true);
+            profilePanel.revalidate();
+            profilePanel.repaint();
+        } catch (Throwable ignored) {}
+    }
 
     private void initLookAndFeel() {
         try {
@@ -121,23 +131,16 @@ public class ResumeBuilderContainer extends JFrame {
         } catch (Exception ignored) { }
     }
 
-    /**
-     * Build the static UI structure:
-     * - Left navigation (buttons)
-     * - Right card stack (placeholders; replaced in plugContent())
-     */
     private void buildUI() {
         rootPanel = new JPanel(new BorderLayout());
         rootPanel.setPreferredSize(new Dimension(795, 538));
 
-        // Left navigation
         JPanel navigationPanel = new JPanel(new GridLayout(5, 1, 0, 12));
         navigationPanel.setBackground(NAV_BG);
         navigationPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         navigationPanel.setPreferredSize(new Dimension(220, 0));
         rootPanel.add(navigationPanel, BorderLayout.WEST);
 
-        // Nav buttons (HoverScaleButton supports sticky scale)
         resumeBuilderButton = new HoverScaleButton("Home");
         buildResumeButton   = new HoverScaleButton("Build Resume");
         savedResumesButton  = new HoverScaleButton("Saved Resumes");
@@ -150,7 +153,6 @@ public class ResumeBuilderContainer extends JFrame {
         navigationPanel.add(settingsButton);
         navigationPanel.add(profileButton);
 
-        // Map card key -> button (for sticky/active state)
         navButtons = new LinkedHashMap<>();
         navButtons.put(CARD_HOME,     resumeBuilderButton);
         navButtons.put(CARD_BUILD,    buildResumeButton);
@@ -158,11 +160,9 @@ public class ResumeBuilderContainer extends JFrame {
         navButtons.put(CARD_SETTINGS, settingsButton);
         navButtons.put(CARD_PROFILE,  profileButton);
 
-        // Right side card stack
         contentPanel = new AnimatedCards();
         rootPanel.add(contentPanel, BorderLayout.CENTER);
 
-        // Placeholders (text + spacing); real content added in plugContent()
         homePanel         = createCardPanel("Landing Page");
         buildResumePanel  = createCardPanel("Drag and Drop");
         savedResumesPanel = createCardPanel("Your saved resumes");
@@ -176,7 +176,6 @@ public class ResumeBuilderContainer extends JFrame {
         contentPanel.addCard(CARD_PROFILE,  profilePanel);
     }
 
-    /** Apply consistent background/foreground and basic button styling. */
     private void styleNavButtons() {
         for (HoverScaleButton b : navButtons.values()) {
             b.setBackground(NAV_BTN_BG);
@@ -185,7 +184,6 @@ public class ResumeBuilderContainer extends JFrame {
         }
     }
 
-    /** Replace placeholders with real content panels. */
     private void plugContent() {
         homePanel.removeAll();
         homePanel.setLayout(new BorderLayout());
@@ -193,16 +191,16 @@ public class ResumeBuilderContainer extends JFrame {
 
         buildResumePanel.removeAll();
         buildResumePanel.setLayout(new BorderLayout());
-        buildResumePanel.add(new UploadPanel(), BorderLayout.CENTER);
+        uploadPanel = new UploadPanel();
+        buildResumePanel.add(uploadPanel, BorderLayout.CENTER);
     }
 
-    /** Show correct "Login"/"Profile" label depending on session state. */
     private void updateAuthUI() {
-        boolean loggedIn = utils.Constants.Session.isLoggedIn();
+        boolean loggedIn = false;
+        try { loggedIn = utils.Constants.Session.isLoggedIn(); } catch (Throwable ignored) {}
         profileButton.setText(loggedIn ? "Profile" : "Login");
     }
 
-    /** Create a simple labeled card with our theme. */
     private JPanel createCardPanel(String text) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(CARD_BG);
@@ -215,10 +213,6 @@ public class ResumeBuilderContainer extends JFrame {
         return panel;
     }
 
-    /**
-     * Profile card with user info + logout.
-     * Logout clears session and returns to HOME.
-     */
     private JPanel createProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(CARD_BG);
@@ -253,7 +247,8 @@ public class ResumeBuilderContainer extends JFrame {
         logoutButton.setFont(new Font("Arial", Font.BOLD, 12));
         logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         logoutButton.addActionListener(e -> {
-            utils.Constants.Session.logout();
+            try { utils.Constants.Session.logout(); } catch (Throwable ignored) {}
+
             JOptionPane.showMessageDialog(
                     this,
                     "You have been logged out successfully.",
@@ -276,21 +271,25 @@ public class ResumeBuilderContainer extends JFrame {
         return panel;
     }
 
-    /** Reflect current session data into the profile card. */
     private void updateProfilePanel() {
-        if (utils.Constants.Session.isLoggedIn()) {
-            models.User user = utils.Constants.Session.getCurrentUser();
-            emailValueLabel.setText(user.getEmail());
-            nameValueLabel.setText(user.getName());
-            logoutButton.setVisible(true);
-        } else {
+        try {
+            if (utils.Constants.Session.isLoggedIn()) {
+                models.User user = utils.Constants.Session.getCurrentUser();
+                emailValueLabel.setText(user.getEmail());
+                nameValueLabel.setText(user.getName());
+                logoutButton.setVisible(true);
+            } else {
+                emailValueLabel.setText("Not logged in");
+                nameValueLabel.setText("Not logged in");
+                logoutButton.setVisible(false);
+            }
+        } catch (Throwable t) {
             emailValueLabel.setText("Not logged in");
             nameValueLabel.setText("Not logged in");
             logoutButton.setVisible(false);
         }
     }
 
-    /** Set all cards to a uniform background. */
     private void setCardBackgrounds(Color bg) {
         JPanel[] cardsArr = { homePanel, buildResumePanel, savedResumesPanel, settingsPanel, profilePanel };
         for (JPanel p : cardsArr) {
@@ -298,29 +297,6 @@ public class ResumeBuilderContainer extends JFrame {
         }
     }
 
-    /**
-     * Nav → Card wiring. Uses a single go(String) method that:
-     * - sets sticky/active nav button
-     * - decides slide direction based on CARD_ORDER
-     * - gracefully handles first-show (no size yet)
-     */
-    private void wireNavigationActions() {
-        resumeBuilderButton.addActionListener(e -> go(CARD_HOME));
-        buildResumeButton.addActionListener(e -> go(CARD_BUILD));
-        savedResumesButton.addActionListener(e -> go(CARD_SAVED));
-        settingsButton.addActionListener(e -> go(CARD_SETTINGS));
-        profileButton.addActionListener(e -> {
-            if (utils.Constants.Session.isLoggedIn()) {
-                updateProfilePanel();
-                updateAuthUI();
-                go(CARD_PROFILE);
-            } else {
-                new ui.LoginFrame().setVisible(true);
-            }
-        });
-    }
-
-    /** Visually pin/unpin which nav button is "active" (scaled up). */
     private void setActiveNav(String key) {
         if (navButtons == null) return;
         for (HoverScaleButton b : navButtons.values()) b.setSticky(false);
@@ -328,7 +304,6 @@ public class ResumeBuilderContainer extends JFrame {
         if (active != null) active.setSticky(true);
     }
 
-    /** Centralized navigation handler for animated card transitions. */
     private void go(String target) {
         setActiveNav(target);
 
@@ -341,17 +316,10 @@ public class ResumeBuilderContainer extends JFrame {
 
         int curIdx = CARD_ORDER.indexOf(current);
         int tgtIdx = CARD_ORDER.indexOf(target);
-        int dir = Integer.compare(tgtIdx, curIdx);   // +1 forward, -1 backward
+        int dir = Integer.compare(tgtIdx, curIdx);
         contentPanel.slideTo(target, dir);
     }
 
-    // Utilities
-
-    /**
-     * Try to load an icon from classpath; if missing, fallback to a file path.
-     * @param classpath   e.g. "/ui/images/profilePic.png"
-     * @param fileFallback e.g. "src/ui/images/profilePic.png"
-     */
     private ImageIcon loadScaledIcon(String classpath, String fileFallback, int w, int h) {
         try {
             java.net.URL url = ResumeBuilderContainer.class.getResource(classpath);

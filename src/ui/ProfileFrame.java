@@ -2,140 +2,118 @@ package ui;
 
 import javax.swing.*;
 import java.awt.*;
-import models.User;
-import utils.Constants;
 
 public class ProfileFrame extends JFrame {
+
+    // UI
     private JPanel mainPanel;
     private JLabel titleLabel;
     private JLabel emailLabel;
     private JLabel nameLabel;
     private JLabel emailValueLabel;
     private JLabel nameValueLabel;
-    private JButton logoutButton;
     private JButton backButton;
+    private JButton logoutButton;
 
     public ProfileFrame() {
-        // Set look and feel for macOS compatibility
-        try {
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-        } catch (Exception e) {
-            // Use default if setting fails
-        }
-        
-        initializeComponents();
-        setupLayout();
-        setupListeners();
-        loadUserData();
+        // Prefer system look & feel
+        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignore) {}
+
+        initializeFrame();
+        createComponents();
+        layoutComponents();
+        populateFromSessionIfPresent();
     }
 
-    private void initializeComponents() {
-        setTitle("User Profile - " + Constants.APP_NAME);
+    private void initializeFrame() {
+        setTitle("User Profile");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(400, 300);
+        setSize(420, 300);
         setLocationRelativeTo(null);
+    }
 
+    private void createComponents() {
         mainPanel = new JPanel(new GridBagLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setContentPane(mainPanel);
 
-        titleLabel = new JLabel("User Profile", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setForeground(Color.BLUE);
+        titleLabel = new JLabel("User Profile");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         emailLabel = new JLabel("Email:");
-        emailLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        nameLabel  = new JLabel("Name:");
 
-        nameLabel = new JLabel("Name:");
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        emailValueLabel = new JLabel("—");
+        nameValueLabel  = new JLabel("—");
 
-        emailValueLabel = new JLabel();
-        emailValueLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-
-        nameValueLabel = new JLabel();
-        nameValueLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-
+        backButton   = new JButton("Back");
         logoutButton = new JButton("Logout");
-        logoutButton.setBackground(Color.RED);
-        logoutButton.setForeground(Color.WHITE);
-        logoutButton.setOpaque(true);
-        logoutButton.setFocusPainted(false);
-        logoutButton.setBorderPainted(false);
-        logoutButton.setFont(new Font("Arial", Font.BOLD, 12));
-        logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-
-        backButton = new JButton("Back to Home");
     }
 
-    private void setupLayout() {
+    private void layoutComponents() {
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
 
         // Title
-        gbc.gridx = 0; gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
         mainPanel.add(titleLabel, gbc);
 
-        // Email label
+        // Email row
+        gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
         gbc.gridx = 0; gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        gbc.anchor = GridBagConstraints.WEST;
         mainPanel.add(emailLabel, gbc);
 
-        // Email value
         gbc.gridx = 1; gbc.gridy = 1;
         mainPanel.add(emailValueLabel, gbc);
 
-        // Name label
+        // Name row
         gbc.gridx = 0; gbc.gridy = 2;
         mainPanel.add(nameLabel, gbc);
 
-        // Name value
         gbc.gridx = 1; gbc.gridy = 2;
         mainPanel.add(nameValueLabel, gbc);
 
-        // Buttons panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
+        // Buttons row
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        btns.add(backButton);
+        btns.add(logoutButton);
 
-        gbc.gridx = 0; gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(20, 5, 5, 5);
-        mainPanel.add(buttonPanel, gbc);
-
-        buttonPanel.add(backButton);
-        buttonPanel.add(logoutButton);
-
-        setContentPane(mainPanel);
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainPanel.add(btns, gbc);
     }
 
-    private void setupListeners() {
-        logoutButton.addActionListener(event -> {
-            Constants.Session.logout();
-            JOptionPane.showMessageDialog(this, "You have been logged out successfully.",
-                                        "Logout", JOptionPane.INFORMATION_MESSAGE);
-            dispose();
-            new LoginFrame().setVisible(true);
-        });
-
-        backButton.addActionListener(e -> {
-            dispose();
-            // If we have a reference to the homepage, we could show it
-            // For now, just close this window
-        });
-    }
-
-    private void loadUserData() {
-        User currentUser = Constants.Session.getCurrentUser();
-        if (currentUser != null) {
-            emailValueLabel.setText(currentUser.getEmail());
-            nameValueLabel.setText(currentUser.getName());
-        } else {
-            // This shouldn't happen if session is properly managed
-            JOptionPane.showMessageDialog(this, "No user session found. Please log in again.",
-                                        "Session Error", JOptionPane.ERROR_MESSAGE);
-            dispose();
-            new LoginFrame().setVisible(true);
+    /** Minimal compatibility: read current user from session if present. */
+    private void populateFromSessionIfPresent() {
+        try {
+            if (utils.Constants.Session.isLoggedIn()) {
+                var user = utils.Constants.Session.getCurrentUser();
+                if (user != null) {
+                    setUser(user.getName(), user.getEmail());
+                }
+            }
+        } catch (Throwable ignore) {
         }
+    }
+
+    // MVC controller hooks
+    public void setOnBack(java.awt.event.ActionListener l)   { if (backButton != null) backButton.addActionListener(l); }
+    public void setOnLogout(java.awt.event.ActionListener l) { if (logoutButton != null) logoutButton.addActionListener(l); }
+
+    // Allow controller/app to set user info explicitly
+    public void setUser(String name, String email) {
+        nameValueLabel.setText(name != null && !name.isBlank() ? name : "—");
+        emailValueLabel.setText(email != null && !email.isBlank() ? email : "—");
+    }
+
+    // Message helpers
+    public void showInfo(String msg, String title)  { JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE); }
+    public void showError(String msg, String title) { JOptionPane.showMessageDialog(this, msg, title, JOptionPane.ERROR_MESSAGE); }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new ProfileFrame().setVisible(true));
     }
 }

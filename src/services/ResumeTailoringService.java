@@ -60,21 +60,22 @@ public class ResumeTailoringService {
         }
 
         if (jobDescription == null || jobDescription.trim().isEmpty()) {
-            return formatProfessionalResume(parsedResume, Collections.emptyList());
+            return formatProfessionalResume(parsedResume, Collections.emptyList(), jobDescription);
         }
 
         String originalResume = parsedResume.getFullText();
         List<String> jobKeywords = analyzeJobDescription(jobDescription);
         List<String> matchedKeywords = mapKeywords(originalResume, jobKeywords);
 
-        return formatProfessionalResume(parsedResume, matchedKeywords);
+        return formatProfessionalResume(parsedResume, matchedKeywords, jobDescription);
     }
 
     /**
      * Formats the resume in a professional layout with proper bullet points and sections
      */
     private String formatProfessionalResume(ResumeParserService.ParsedResume parsedResume,
-                                            List<String> matchedKeywords) {
+                                            List<String> matchedKeywords,
+                                            String jobDescription) {
         StringBuilder resume = new StringBuilder();
         Map<String, String> sections = parsedResume.getSections();
 
@@ -172,11 +173,11 @@ public class ResumeTailoringService {
 
         // 9. FOOTER with Match Score
         resume.append(repeatChar('═', 80)).append("\n");
-        if (!matchedKeywords.isEmpty()) {
-            double matchScore = calculatedMatchScore(parsedResume.getFullText(),
-                    String.join(" ", matchedKeywords)); // Approximate scoring
-            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d | ★ indicates strong alignment with requirements\n",
-                    matchScore, matchedKeywords.size()));
+        if (!matchedKeywords.isEmpty() && jobDescription != null && !jobDescription.trim().isEmpty()) {
+            double matchScore = calculatedMatchScore(parsedResume.getFullText(), jobDescription);
+            List<String> allJobKeywords = analyzeJobDescription(jobDescription);
+            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d/%d | ★ indicates strong alignment with requirements\n",
+                    matchScore, matchedKeywords.size(), allJobKeywords.size()));
         } else {
             resume.append("★ indicates strong alignment with requirements\n");
         }

@@ -1,0 +1,3 @@
+-Base of resume tailoring service done, will be refactored later
+-Saved resumes page is next thing to work on along with adding resumes to the database
+-After that exporting and editing resume is the most important

@@ -16,18 +16,12 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
 
     private final ResumeDAO resumeDAO;
 
-    // Keep the initial id just in case, but we’ll prefer the Session value
-    private final int initialUserId;
-
     private enum SortMode { DATE_DESC, NAME_ASC }
     private SortMode sortMode = SortMode.DATE_DESC;
 
-    public SavedResumesController(SavedResumesPanel view,
-                                  ResumeDAO resumeDAO,
-                                  int userId) {
+    public SavedResumesController(SavedResumesPanel view, ResumeDAO resumeDAO) {
         super(view);
         this.resumeDAO = resumeDAO;
-        this.initialUserId = userId;  // may be -1 if created before login
 
         attach();
         reload();
@@ -50,15 +44,15 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         view.setOnEdit(resume -> {
             JOptionPane.showMessageDialog(
                     view,
-                    "Edit is not implemented yet.\nYou can wire this to open the resume in your builder.",
+                    "Edit is not implemented yet.",
                     "Edit Resume",
                     JOptionPane.INFORMATION_MESSAGE
             );
         });
 
         view.setOnDelete(resume -> {
-            int uid = getCurrentUserId();
-            if (uid <= 0) {
+            String userId = getCurrentUserId();
+            if (userId == null || userId.isBlank()) {
                 JOptionPane.showMessageDialog(
                         view,
                         "Please log in before deleting resumes.",
@@ -77,7 +71,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
             );
             if (choice == JOptionPane.YES_OPTION) {
                 try {
-                    boolean ok = resumeDAO.deleteResume(resume.getId(), uid);
+                    boolean ok = resumeDAO.deleteResume(resume.getId(), userId);
                     if (!ok) {
                         JOptionPane.showMessageDialog(
                                 view,
@@ -101,8 +95,12 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
     }
 
     private void handleUploadClicked() {
-        int uid = getCurrentUserId();
-        if (uid <= 0) {
+        boolean loggedIn = false;
+        try {
+            loggedIn = utils.Constants.Session.isLoggedIn();
+        } catch (Throwable ignored) {}
+
+        if (!loggedIn) {
             JOptionPane.showMessageDialog(
                     view,
                     "Please log in before uploading resumes.",
@@ -112,11 +110,20 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
             return;
         }
 
+        String userId = getCurrentUserId();
+        if (userId == null || userId.isBlank()) {
+            JOptionPane.showMessageDialog(
+                    view,
+                    "You're logged in, but we couldn't determine your account id.\n" +
+                            "Make sure UserDAO sets user.setId(...) from the database.",
+                    "Account Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Upload Resume");
-        // Optional filter:
-        // chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-        //         "Documents (PDF, DOC, DOCX)", "pdf", "doc", "docx"));
 
         int result = chooser.showOpenDialog(view);
         if (result != JFileChooser.APPROVE_OPTION) {
@@ -135,7 +142,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         }
 
         try {
-            int newId = saveResumeFile(selected, uid);
+            int newId = saveResumeFile(selected, userId);
             if (newId > 0) {
                 JOptionPane.showMessageDialog(
                         view,
@@ -157,52 +164,62 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
     }
 
     /**
-     * Get current user id from session (preferred), falling back to initialUserId.
+     * Get current user id from session as a String (e.g. "U5").
      */
-    private int getCurrentUserId() {
+    private String getCurrentUserId() {
         try {
             if (utils.Constants.Session.isLoggedIn()) {
-                var u = utils.Constants.Session.getCurrentUser();
+                models.User u = utils.Constants.Session.getCurrentUser();
                 if (u != null) {
-                    // User.getId() returns String -> parse to int
-                    return Integer.parseInt(u.getId());
+                    return u.getId();
                 }
             }
         } catch (Throwable ignored) {}
-        return initialUserId;
+        return null;
     }
 
     /**
      * Copies file into an "uploads" folder and inserts a row in `resumes`.
      * Returns the new resume id.
      */
-    private int saveResumeFile(File originalFile, int uid) throws IOException, SQLException {
+    private int saveResumeFile(File originalFile, String userId) throws IOException, SQLException {
         Path uploadsDir = Paths.get("uploads");
         if (Files.notExists(uploadsDir)) {
             Files.createDirectories(uploadsDir);
         }
 
-        String storedFileName = uid + "_" + System.currentTimeMillis() + "_" + originalFile.getName();
+        String storedFileName = userId + "_" + System.currentTimeMillis() + "_" + originalFile.getName();
         Path dest = uploadsDir.resolve(storedFileName);
 
         Files.copy(originalFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
 
-        Resume resume = new Resume(uid, originalFile.getName(), dest.toString());
+        Resume resume = new Resume(userId, originalFile.getName(), dest.toString());
         return resumeDAO.saveResume(resume);
     }
 
     private void reload() {
-        int uid = getCurrentUserId();
-        if (uid <= 0) {
+        boolean loggedIn = false;
+        try {
+            loggedIn = utils.Constants.Session.isLoggedIn();
+        } catch (Throwable ignored) {}
+
+        if (!loggedIn) {
             view.showResumes(new ArrayList<>());
             return;
         }
+
+        String userId = getCurrentUserId();
+        if (userId == null || userId.isBlank()) {
+            view.showResumes(new ArrayList<>());
+            return;
+        }
+
         try {
             List<Resume> resumes;
             if (sortMode == SortMode.NAME_ASC) {
-                resumes = resumeDAO.getResumesByUserOrderByName(uid);
+                resumes = resumeDAO.getResumesByUserOrderByName(userId);
             } else {
-                resumes = resumeDAO.getResumesByUserOrderByDate(uid);
+                resumes = resumeDAO.getResumesByUserOrderByDate(userId);
             }
             view.showResumes(resumes);
         } catch (SQLException e) {

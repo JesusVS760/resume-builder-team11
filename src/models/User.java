@@ -13,7 +13,7 @@ public class User {
     private String verificationCode;
     private String verificationExpires;
     private String lastLogin;
-    private boolean phoneVerified;  // Add this field at the top with other variables
+    private boolean phoneVerified;
     private boolean textVerified;
 
 

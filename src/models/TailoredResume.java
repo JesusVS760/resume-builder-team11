@@ -41,6 +41,9 @@ public class TailoredResume {
         this.filePath = filePath;
     }
 
+    public TailoredResume(int resumeId, Object o, Object o1, String jobDesc, String tailoredText, Object o2) {
+    }
+
     // Getters / setters
 
     public int getId() { return id; }

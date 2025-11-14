@@ -6,14 +6,12 @@ import services.ResumeParserService;
 import services.ResumeTailoringService;
 import dao.ResumeDAO;
 import dao.TailoredResumeDAO;
-import controllers.SavedResumesController;
-import ui.SavedResumesPanel;
-import dao.ResumeDAO;
 
 import ui.ResumeBuilderContainer;
 import ui.UploadPanel;
 import ui.LoginFrame;
 import ui.SignupFrame;
+import ui.SavedResumesPanel;
 
 public class AppController extends BaseController<ResumeBuilderContainer> {
     private final AuthService authService;
@@ -59,60 +57,42 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
         UploadPanel up = view.getUploadPanel();
         if (up != null && uploadController == null) {
             // Services
-            var parser = new services.ResumeParserService();
-            var tailoringService = new services.ResumeTailoringService();
+            ResumeParserService parser = new ResumeParserService();
+            ResumeTailoringService tailoringService = new ResumeTailoringService();
 
             // DAOs
-            var resumeDAO = new dao.ResumeDAO();
-            var tailoredResumeDAO = new dao.TailoredResumeDAO();
-
-            // Current logged-in user id (or -1 if not logged in)
-            int userId = -1;
-            try {
-                if (utils.Constants.Session.isLoggedIn()) {
-                    var u = utils.Constants.Session.getCurrentUser();
-                    userId = Integer.parseInt(u.getId());
-                }
-            } catch (Throwable ignored) {}
+            ResumeDAO resumeDAO = new ResumeDAO();
+            TailoredResumeDAO tailoredResumeDAO = new TailoredResumeDAO();
 
             uploadController = new UploadController(
                     up,
                     parser,
                     tailoringService,
                     resumeDAO,
-                    tailoredResumeDAO,
-                    userId
+                    tailoredResumeDAO
             );
         }
     }
 
+    // Saved resumes wiring
     private void wireSaved() {
-        ui.SavedResumesPanel savedPanel = view.getSavedPanel();
+        SavedResumesPanel savedPanel = view.getSavedPanel();
         if (savedPanel != null && savedResumesController == null) {
-
-            int userId = -1;
-            try {
-                if (utils.Constants.Session.isLoggedIn()) {
-                    var u = utils.Constants.Session.getCurrentUser();
-                    userId = Integer.parseInt(u.getId());
-                }
-            } catch (Throwable ignored) {}
-
+            // SavedResumesController now reads the current user from Session itself
             savedResumesController = new SavedResumesController(
                     savedPanel,
-                    new dao.ResumeDAO(),
-                    userId
+                    new ResumeDAO()
             );
         }
     }
-
-
-
 
     // Auth helpers
     private boolean isLoggedIn() {
-        try { return utils.Constants.Session.isLoggedIn(); }
-        catch (Throwable t) { return false; }
+        try {
+            return utils.Constants.Session.isLoggedIn();
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private void onLogout() {

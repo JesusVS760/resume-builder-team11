@@ -25,7 +25,6 @@ public class UploadController extends BaseController<UploadPanel> {
     private final ResumeTailoringService tailoringService;
     private final ResumeDAO resumeDAO;
     private final TailoredResumeDAO tailoredResumeDAO;
-    private final int userId; // current logged-in user
 
     private ParsedResume lastParsed;
 
@@ -33,14 +32,12 @@ public class UploadController extends BaseController<UploadPanel> {
                             ResumeParserService parser,
                             ResumeTailoringService tailoringService,
                             ResumeDAO resumeDAO,
-                            TailoredResumeDAO tailoredResumeDAO,
-                            int userId) {
+                            TailoredResumeDAO tailoredResumeDAO) {
         super(view);
         this.parser = parser;
         this.tailoringService = tailoringService;
         this.resumeDAO = resumeDAO;
         this.tailoredResumeDAO = tailoredResumeDAO;
-        this.userId = userId;
         attach();
     }
 
@@ -87,23 +84,22 @@ public class UploadController extends BaseController<UploadPanel> {
                 if (jobDesc != null && !jobDesc.isBlank()) {
                     updateProgress(75, "Tailoring resume to job…");
 
-                    // Use YOUR existing service method
                     tailoredText = tailoringService.tailorResume(parsed, jobDesc);
 
-                    // Build model and persist
-                    TailoredResume tr = new TailoredResume(
-                            userId,
-                            resumeId,
-                            null,          // jobTitle (optional for now)
-                            null,          // jobCompany
-                            jobDesc,
-                            tailoredText,
-                            null           // filePath if you later export to PDF/DOCX
-                    );
+                    // Only persist if we successfully saved the original resume
+                    if (resumeId > 0) {
+                        TailoredResume tr = new TailoredResume(
+                                resumeId,
+                                null,          // jobTitle (optional for now)
+                                null,          // jobCompany
+                                jobDesc,
+                                tailoredText,
+                                null           // filePath if you later export to PDF/DOCX
+                        );
 
-                    tailoredResumeDAO.saveTailoredResume(tr);
+                        tailoredResumeDAO.saveTailoredResume(tr);
+                    }
                 }
-
                 updateProgress(85, "Finalizing…");
                 return parsed;
             }
@@ -120,14 +116,23 @@ public class UploadController extends BaseController<UploadPanel> {
 
                     // Simple confirmation if we actually tailored & saved
                     if (tailoredText != null && !tailoredText.isBlank()) {
-                        JOptionPane.showMessageDialog(
-                                view,
-                                "A tailored resume was generated and saved for this job description.",
-                                "Tailored Resume Saved",
-                                JOptionPane.INFORMATION_MESSAGE
-                        );
+                        if (resumeId > 0) {
+                            JOptionPane.showMessageDialog(
+                                    view,
+                                    "A tailored resume was generated and saved for this job description.",
+                                    "Tailored Resume Saved",
+                                    JOptionPane.INFORMATION_MESSAGE
+                            );
+                        } else {
+                            JOptionPane.showMessageDialog(
+                                    view,
+                                    "A tailored resume was generated, but you are not logged in,\n" +
+                                            "so it was not saved to your account.",
+                                    "Tailored Resume Generated",
+                                    JOptionPane.INFORMATION_MESSAGE
+                            );
+                        }
                     }
-
                 } catch (Exception ex) {
                     view.setBusy(false);
                     view.setProgressValue(0);
@@ -144,12 +149,19 @@ public class UploadController extends BaseController<UploadPanel> {
             }
         }.execute();
     }
-
     /**
      * Copies the original file into an "uploads" folder and inserts a row in `resumes`,
-     * returning the new resume's database id.
+     * returning the new resume's database id. If no user is logged in, it returns -1
+     * and does not persist anything.
      */
     private int saveResumeToDatabase(File originalFile) throws IOException, SQLException {
+        String userId = getCurrentUserId();
+
+        // If nobody is logged in, we skip saving but still allow parsing.
+        if (userId == null || userId.isBlank()) {
+            return -1;
+        }
+
         Path uploadsDir = Paths.get("uploads");
         if (Files.notExists(uploadsDir)) {
             Files.createDirectories(uploadsDir);
@@ -160,9 +172,11 @@ public class UploadController extends BaseController<UploadPanel> {
 
         Files.copy(originalFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
 
+        // Resume model should use String userId
         Resume resume = new Resume(userId, originalFile.getName(), dest.toString());
         return resumeDAO.saveResume(resume);
     }
+
 
     private void showParsedSummary(ParsedResume parsed, File file, String jobDesc) {
         String full = parsed.getFullText() == null ? "" : parsed.getFullText();
@@ -196,7 +210,6 @@ public class UploadController extends BaseController<UploadPanel> {
             html.append("<div style='color:#666;'>No common sections detected.</div>");
         }
 
-        // Experiences (show first 2 snippets)
         if (exps != null && !exps.isEmpty()) {
             html.append("<div style='margin-top:8px;'><b>Experiences (")
                     .append(exps.size())
@@ -268,4 +281,17 @@ public class UploadController extends BaseController<UploadPanel> {
     public ParsedResume getLastParsed() {
         return lastParsed;
     }
+
+    private String getCurrentUserId() {
+        try {
+            if (utils.Constants.Session.isLoggedIn()) {
+                models.User u = utils.Constants.Session.getCurrentUser();
+                if (u != null) {
+                    return u.getId();  // e.g. "U1", "U2", etc.
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
 }

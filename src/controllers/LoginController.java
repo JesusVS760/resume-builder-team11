@@ -22,7 +22,6 @@ public class LoginController extends BaseController<LoginFrame> {
         attach();
     }
 
-
     private void attach() {
         view.setOnLogin(e -> doLogin());
         view.setOnSignup(e -> {

@@ -31,7 +31,7 @@ public class SavedResumesPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(BG_DARK);
 
-        // ----- TOP BAR -----
+        // TOP BAR
         JPanel topBar = new JPanel();
         topBar.setLayout(new BoxLayout(topBar, BoxLayout.X_AXIS));
         topBar.setBackground(BG_DARK);
@@ -104,7 +104,7 @@ public class SavedResumesPanel extends JPanel {
         return b;
     }
 
-    // ---------- Public API used by controller ----------
+    // Public API used by controller
 
     public void showResumes(List<Resume> resumes) {
         listPanel.removeAll();
@@ -142,7 +142,7 @@ public class SavedResumesPanel extends JPanel {
         this.onDelete = onDelete;
     }
 
-    // ---------- Card UI (thumbnail + info + 3-dot menu) ----------
+    // Card UI (thumbnail + info + 3-dot menu)
 
     private JComponent createResumeCard(Resume resume) {
         JPanel card = new JPanel(new BorderLayout(12, 0));

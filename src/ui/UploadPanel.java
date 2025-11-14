@@ -11,10 +11,10 @@ import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.*;
 import java.io.File;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 public class UploadPanel extends JPanel {
 
@@ -143,13 +143,7 @@ public class UploadPanel extends JPanel {
         buildButton = new JButton("Build Tailored Resume");
         buildButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         buildButton.addActionListener(e -> triggerBuild());
-        buildButton.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_NEUTRAL),
-                new EmptyBorder(10, 16, 10, 16)
-        ));
-        buildButton.setBackground(BG_WHITE);
-        buildButton.setFocusPainted(false);
-        buildButton.setOpaque(true);
+        stylePrimaryButton(buildButton);
 
         progress = new JProgressBar(0, 100);
         progress.setStringPainted(true);
@@ -334,6 +328,53 @@ public class UploadPanel extends JPanel {
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
+    private void stylePrimaryButton(JButton b) {
+        // Flat button so our colors show correctly
+        b.setUI(new BasicButtonUI());
+        b.setFocusPainted(false);
+        b.setBorderPainted(false);
+        b.setContentAreaFilled(true);
+        b.setOpaque(true);
+
+        Color normal  = new Color(0x374151); // base slate
+        Color hover   = new Color(0x4B5563); // lighter on hover
+        Color pressed = new Color(0x1F2937); // darker on press
+
+        b.setBackground(normal);
+        b.setForeground(Color.WHITE);
+        b.setBorder(BorderFactory.createEmptyBorder(10, 24, 10, 24));
+        b.setFont(new Font("Segoe UI", Font.PLAIN, 13)); // nicer readable font
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Hover + press color behavior
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                b.setBackground(hover);
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                b.setBackground(normal);
+            }
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                b.setBackground(pressed);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                if (b.getBounds().contains(e.getPoint())) {
+                    b.setBackground(hover);
+                } else {
+                    b.setBackground(normal);
+                }
+            }
+        });
+    }
+
+
     private class DropArea extends JPanel {
         private boolean hover = false;
 
@@ -351,33 +392,52 @@ public class UploadPanel extends JPanel {
 
         void setHover(boolean h) { this.hover = h; }
 
-        @Override protected void paintComponent(Graphics g0) {
+        @Override
+        protected void paintComponent(Graphics g0) {
             super.paintComponent(g0);
             Graphics2D g = (Graphics2D) g0.create();
             int w = getWidth(), h = getHeight();
 
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            g.setColor(BG_WHITE);
-            g.fillRoundRect(0, 0, w, h, 12, 12);
+            g.setColor(new Color(0xe6e6e6));
+            g.fillRect(0, 0, w, h);
 
-            float[] dash = {8f, 8f};
-            g.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10f, dash, 0f));
+            // Simple solid border (no rounded corners, no dash)
             g.setColor(hover ? ACCENT : BORDER_NEUTRAL);
-            g.drawRoundRect(1, 1, w - 2, h - 2, 12, 12);
+            g.setStroke(new BasicStroke(2f));
+            g.drawRect(1, 1, w - 2, h - 2);
 
-            g.setColor(TEXT_MUTED);
-            String t1 = "Drag & drop your resume";
-            String t2 = "or click to browse";
-            Font f1 = getFont().deriveFont(Font.BOLD, 16f);
-            Font f2 = getFont().deriveFont(Font.PLAIN, 13f);
+            // Text lines
+            String t1 = "Drag & Drop your resume";
+            String t2 = "(in PDF, DOC, or DOCX format)";
+            String t3 = "or click to choose file";
+
+            Font f1 = new Font("Segoe UI", Font.BOLD, 16);   // main line
+            Font f2 = new Font("Segoe UI", Font.PLAIN, 13);  // format line
+            Font f3 = new Font("Segoe UI", Font.PLAIN, 12);  // hint line
+
+            FontMetrics fm1 = g.getFontMetrics(f1);
+            FontMetrics fm2 = g.getFontMetrics(f2);
+            FontMetrics fm3 = g.getFontMetrics(f3);
+
+            int gap = 4;
+            int totalHeight = fm1.getHeight() + fm2.getHeight() + fm3.getHeight() + gap * 2;
+            int y = (h - totalHeight) / 2 + fm1.getAscent();
 
             g.setFont(f1);
-            int y = h / 2 - 6;
+            g.setColor(TEXT_PRIMARY);
             drawCentered(g, t1, w, y);
 
+            y += fm1.getHeight() + gap;
             g.setFont(f2);
-            drawCentered(g, t2, w, y + 22);
+            g.setColor(TEXT_MUTED);
+            drawCentered(g, t2, w, y);
+
+            y += fm2.getHeight() + gap;
+            g.setFont(f3);
+            g.setColor(TEXT_MUTED);
+            drawCentered(g, t3, w, y);
 
             g.dispose();
         }

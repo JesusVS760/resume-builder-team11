@@ -7,11 +7,7 @@ import services.ResumeTailoringService;
 import dao.ResumeDAO;
 import dao.TailoredResumeDAO;
 
-import ui.ResumeBuilderContainer;
-import ui.UploadPanel;
-import ui.LoginFrame;
-import ui.SignupFrame;
-import ui.SavedResumesPanel;
+import ui.*;
 
 public class AppController extends BaseController<ResumeBuilderContainer> {
     private final AuthService authService;

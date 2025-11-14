@@ -110,4 +110,53 @@ public class ResumeDAO {
         r.setUploadedAt(rs.getString("uploaded_at"));
         return r;
     }
+
+    public List<Resume> getResumesByUserOrderByDate(int userId) throws SQLException {
+        String sql = """
+        SELECT id, user_id, file_name, file_path, uploaded_at
+        FROM resumes
+        WHERE user_id = ?
+        ORDER BY datetime(uploaded_at) DESC
+        """;
+
+        List<Resume> results = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
+            }
+        }
+        return results;
+    }
+
+    public List<Resume> getResumesByUserOrderByName(int userId) throws SQLException {
+        String sql = """
+        SELECT id, user_id, file_name, file_path, uploaded_at
+        FROM resumes
+        WHERE user_id = ?
+        ORDER BY LOWER(file_name) ASC, datetime(uploaded_at) DESC
+        """;
+
+        List<Resume> results = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
+            }
+        }
+        return results;
+    }
+
 }

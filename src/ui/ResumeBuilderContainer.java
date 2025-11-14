@@ -34,7 +34,7 @@ public class ResumeBuilderContainer extends JFrame {
     private AnimatedCards contentPanel;
     private JPanel homePanel;
     private JPanel buildResumePanel;
-    private JPanel savedResumesPanel;
+    private SavedResumesPanel savedResumesPanel;
     private JPanel settingsPanel;
     private JPanel profilePanel;
 
@@ -112,6 +112,8 @@ public class ResumeBuilderContainer extends JFrame {
 
     public UploadPanel getUploadPanel() { return uploadPanel; }
 
+    public SavedResumesPanel getSavedPanel() { return savedResumesPanel; }
+
     public void updateAuthUIPublic() { updateAuthUI(); }
 
     public void updateProfileView(models.User user) {
@@ -165,7 +167,7 @@ public class ResumeBuilderContainer extends JFrame {
 
         homePanel         = createCardPanel("Landing Page");
         buildResumePanel  = createCardPanel("Drag and Drop");
-        savedResumesPanel = createCardPanel("Your saved resumes");
+        savedResumesPanel = new SavedResumesPanel();
         settingsPanel     = createCardPanel("Settings");
         profilePanel      = createProfilePanel();
 

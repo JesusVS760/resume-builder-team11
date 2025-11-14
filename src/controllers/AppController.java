@@ -6,6 +6,9 @@ import services.ResumeParserService;
 import services.ResumeTailoringService;
 import dao.ResumeDAO;
 import dao.TailoredResumeDAO;
+import controllers.SavedResumesController;
+import ui.SavedResumesPanel;
+import dao.ResumeDAO;
 
 import ui.ResumeBuilderContainer;
 import ui.UploadPanel;
@@ -17,6 +20,7 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
     private final TwilioService twilioService;
 
     private UploadController uploadController;
+    private SavedResumesController savedResumesController;
 
     public AppController(ResumeBuilderContainer container,
                          AuthService authService,
@@ -27,17 +31,23 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
 
         wireNav();
         wireUpload();
+        wireSaved();
     }
 
     // Navigation wiring
     private void wireNav() {
         view.setOnNavHome(e -> view.showHome());
         view.setOnNavBuild(e -> view.showBuild());
-        view.setOnNavSaved(e -> view.showSaved());
+        view.setOnNavSaved(e -> {
+            view.showSaved();
+            if (savedResumesController != null) {
+                savedResumesController.refresh();
+            }
+        });
         view.setOnNavSettings(e -> view.showSettings());
         view.setOnNavProfile(e -> {
             if (isLoggedIn()) {
-                openProfile();    // switch card, not a new window
+                openProfile();
             } else {
                 openLogin();
             }
@@ -75,6 +85,28 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
             );
         }
     }
+
+    private void wireSaved() {
+        ui.SavedResumesPanel savedPanel = view.getSavedPanel();
+        if (savedPanel != null && savedResumesController == null) {
+
+            int userId = -1;
+            try {
+                if (utils.Constants.Session.isLoggedIn()) {
+                    var u = utils.Constants.Session.getCurrentUser();
+                    userId = Integer.parseInt(u.getId());
+                }
+            } catch (Throwable ignored) {}
+
+            savedResumesController = new SavedResumesController(
+                    savedPanel,
+                    new dao.ResumeDAO(),
+                    userId
+            );
+        }
+    }
+
+
 
 
     // Auth helpers

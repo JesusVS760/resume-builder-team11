@@ -1,115 +1,72 @@
-// TODO: Implement TailoredResume model class
-// This class represents a tailored resume result
-// Fields: id, resumeId, jobDescId, tailoredContent, createdDate
-
 package models;
 
-import com.twilio.rest.api.v2010.account.incomingphonenumber.Local;
-
-import java.time.LocalDateTime;
-import java.util.Objects;
-
 public class TailoredResume {
+    private int id;
+    private int userId;
+    private int resumeId;          // FK to resumes.id
+    private String jobTitle;
+    private String jobCompany;
+    private String jobDescription;
+    private String tailoredText;   // the tailored resume content
+    private String filePath;       // path to exported PDF/DOCX
+    private String createdAt;      // TEXT from DB
 
-    private Long id;
-    private Long resumeId;
-    private Long jobDescId;
-    private String tailoredContent;
-    private LocalDateTime createdDate;
+    public TailoredResume() {}
 
-    // constructors
-
-    public TailoredResume() {
-        this.createdDate = LocalDateTime.now();
-    }
-
-    // all fields except id (new records)
-    public TailoredResume(Long resumeId, Long jobDescId, String tailoredContent) {
-        this.resumeId = resumeId;
-        this.jobDescId = jobDescId;
-        this.tailoredContent = tailoredContent;
-        this.createdDate = LocalDateTime.now();
-    }
-
-    // full constructor
-
-    public TailoredResume(Long id, Long resumeId, Long jobDescId, String tailoredContent, LocalDateTime createDate) {
+    // Constructor for loading from DB
+    public TailoredResume(int id, int userId, int resumeId, String jobTitle,
+                          String jobCompany, String jobDescription,
+                          String tailoredText, String filePath, String createdAt) {
         this.id = id;
+        this.userId = userId;
         this.resumeId = resumeId;
-        this.jobDescId = jobDescId;
-        this.tailoredContent = tailoredContent;
-        this.createdDate = createDate;
+        this.jobTitle = jobTitle;
+        this.jobCompany = jobCompany;
+        this.jobDescription = jobDescription;
+        this.tailoredText = tailoredText;
+        this.filePath = filePath;
+        this.createdAt = createdAt;
     }
 
-    public Long getId() {
-        return id;
+    // Constructor for inserting a new tailored resume
+    public TailoredResume(int userId, int resumeId, String jobTitle,
+                          String jobCompany, String jobDescription,
+                          String tailoredText, String filePath) {
+        this.userId = userId;
+        this.resumeId = resumeId;
+        this.jobTitle = jobTitle;
+        this.jobCompany = jobCompany;
+        this.jobDescription = jobDescription;
+        this.tailoredText = tailoredText;
+        this.filePath = filePath;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    // Getters / setters
 
-    public Long getResumeId() {
-        return resumeId;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public Long getJobDescId() {
-        return jobDescId;
-    }
+    public int getUserId() { return userId; }
+    public void setUserId(int userId) { this.userId = userId; }
 
-    public void setJobDescId(Long jobDescId) {
-        this.jobDescId = jobDescId;
-    }
+    public int getResumeId() { return resumeId; }
+    public void setResumeId(int resumeId) { this.resumeId = resumeId; }
 
-    public String getTailoredContent() {
-        return tailoredContent;
-    }
+    public String getJobTitle() { return jobTitle; }
+    public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
 
-    public void setTailoredContent(String tailoredContent) {
-        this.tailoredContent = tailoredContent;
-    }
+    public String getJobCompany() { return jobCompany; }
+    public void setJobCompany(String jobCompany) { this.jobCompany = jobCompany; }
 
-    public LocalDateTime getCreateDate() {
-        return createdDate;
-    }
+    public String getJobDescription() { return jobDescription; }
+    public void setJobDescription(String jobDescription) { this.jobDescription = jobDescription; }
 
-    public void setCreateDate(LocalDateTime createDate) {
-        this.createdDate = createDate;
-    }
+    public String getTailoredText() { return tailoredText; }
+    public void setTailoredText(String tailoredText) { this.tailoredText = tailoredText; }
 
-    // validates that all required fields are present
+    public String getFilePath() { return filePath; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
 
-    public boolean isValid() {
-        return resumeId != null
-        && jobDescId != null
-        && tailoredContent != null
-        && !tailoredContent.trim().isEmpty()
-        && createdDate != null;
-    }
-
-     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TailoredResume that = (TailoredResume) o;
-        return Objects.equals(id, that.id)
-                && Objects.equals(resumeId, that.resumeId)
-                && Objects.equals(jobDescId, that.jobDescId);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, resumeId, jobDescId);
-    }
-
-    @Override
-    public String toString() {
-        return "TailoredResume{" +
-                "id=" + id +
-                ", resumeId=" + resumeId +
-                ", jobDescId=" + jobDescId +
-                ", tailoredContentLength=" + (tailoredContent != null ? tailoredContent.length() : 0) +
-                ", createdDate=" + createdDate +
-                '}';
-    }
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 }

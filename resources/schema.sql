@@ -17,3 +17,28 @@ CREATE TABLE IF NOT EXISTS oauth_users (
     name VARCHAR(255),
     oauth_provider VARCHAR(50) NOT NULL
 );
+
+-- Resumes table - for storing resumes --
+CREATE TABLE IF NOT EXISTS resumes (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    file_name   TEXT    NOT NULL,
+    file_path   TEXT    NOT NULL,
+    uploaded_at TEXT    DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Tailored resumes generated from an original resume --
+CREATE TABLE IF NOT EXISTS tailored_resumes (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id             INTEGER NOT NULL,
+    resume_id           INTEGER NOT NULL,   -- FK to resumes.id
+    job_title           TEXT,               -- what job this was tailored for
+    job_company         TEXT,
+    job_description     TEXT,               -- store the JD text you used
+    tailored_text       TEXT    NOT NULL,   -- the actual tailored resume content
+    file_path           TEXT,               -- exported PDF/DOCX path
+    created_at          TEXT    DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id)   REFERENCES users(id)    ON DELETE CASCADE,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id)  ON DELETE CASCADE
+);

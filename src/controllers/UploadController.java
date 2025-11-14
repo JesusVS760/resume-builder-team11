@@ -3,21 +3,44 @@ package controllers;
 import ui.UploadPanel;
 import services.ResumeParserService;
 import services.ResumeParserService.ParsedResume;
+import services.ResumeTailoringService;
+
+import dao.ResumeDAO;
+import dao.TailoredResumeDAO;
+import models.Resume;
+import models.TailoredResume;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
 public class UploadController extends BaseController<UploadPanel> {
     private final ResumeParserService parser;
+    private final ResumeTailoringService tailoringService;
+    private final ResumeDAO resumeDAO;
+    private final TailoredResumeDAO tailoredResumeDAO;
+    private final int userId; // current logged-in user
+
     private ParsedResume lastParsed;
 
-    public UploadController(UploadPanel view, ResumeParserService parser) {
+    public UploadController(UploadPanel view,
+                            ResumeParserService parser,
+                            ResumeTailoringService tailoringService,
+                            ResumeDAO resumeDAO,
+                            TailoredResumeDAO tailoredResumeDAO,
+                            int userId) {
         super(view);
         this.parser = parser;
+        this.tailoringService = tailoringService;
+        this.resumeDAO = resumeDAO;
+        this.tailoredResumeDAO = tailoredResumeDAO;
+        this.userId = userId;
         attach();
     }
 
@@ -45,12 +68,42 @@ public class UploadController extends BaseController<UploadPanel> {
         view.setProgressValue(5);
 
         new SwingWorker<ParsedResume, Void>() {
+            private int resumeId = -1;
+            private String tailoredText; // may stay null if no jobDesc
+
             @Override
             protected ParsedResume doInBackground() throws Exception {
                 updateProgress(15, "Validating file…");
+
+                // 1) Save original resume file + DB record
+                resumeId = saveResumeToDatabase(file);
+
                 updateProgress(35, "Extracting text…");
                 updateProgress(60, "Parsing sections…");
+
                 ParsedResume parsed = parser.parseResumeComplete(file);
+
+                // 2) Generate + save tailored resume if we have a job description
+                if (jobDesc != null && !jobDesc.isBlank()) {
+                    updateProgress(75, "Tailoring resume to job…");
+
+                    // Use YOUR existing service method
+                    tailoredText = tailoringService.tailorResume(parsed, jobDesc);
+
+                    // Build model and persist
+                    TailoredResume tr = new TailoredResume(
+                            userId,
+                            resumeId,
+                            null,          // jobTitle (optional for now)
+                            null,          // jobCompany
+                            jobDesc,
+                            tailoredText,
+                            null           // filePath if you later export to PDF/DOCX
+                    );
+
+                    tailoredResumeDAO.saveTailoredResume(tr);
+                }
+
                 updateProgress(85, "Finalizing…");
                 return parsed;
             }
@@ -62,14 +115,24 @@ public class UploadController extends BaseController<UploadPanel> {
                     updateProgress(100, "Done");
                     view.setBusy(false);
 
-                    // Show the summary window
+                    // Existing summary popup
                     showParsedSummary(lastParsed, file, jobDesc);
+
+                    // Simple confirmation if we actually tailored & saved
+                    if (tailoredText != null && !tailoredText.isBlank()) {
+                        JOptionPane.showMessageDialog(
+                                view,
+                                "A tailored resume was generated and saved for this job description.",
+                                "Tailored Resume Saved",
+                                JOptionPane.INFORMATION_MESSAGE
+                        );
+                    }
 
                 } catch (Exception ex) {
                     view.setBusy(false);
                     view.setProgressValue(0);
                     view.setStatus("Ready");
-                    view.showError("Parsing failed: " + ex.getMessage(), "Parse Error");
+                    view.showError("Resume processing failed: " + ex.getMessage(), "Error");
                 }
             }
 
@@ -80,6 +143,25 @@ public class UploadController extends BaseController<UploadPanel> {
                 });
             }
         }.execute();
+    }
+
+    /**
+     * Copies the original file into an "uploads" folder and inserts a row in `resumes`,
+     * returning the new resume's database id.
+     */
+    private int saveResumeToDatabase(File originalFile) throws IOException, SQLException {
+        Path uploadsDir = Paths.get("uploads");
+        if (Files.notExists(uploadsDir)) {
+            Files.createDirectories(uploadsDir);
+        }
+
+        String storedFileName = userId + "_" + System.currentTimeMillis() + "_" + originalFile.getName();
+        Path dest = uploadsDir.resolve(storedFileName);
+
+        Files.copy(originalFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
+
+        Resume resume = new Resume(userId, originalFile.getName(), dest.toString());
+        return resumeDAO.saveResume(resume);
     }
 
     private void showParsedSummary(ParsedResume parsed, File file, String jobDesc) {
@@ -159,8 +241,10 @@ public class UploadController extends BaseController<UploadPanel> {
 
     private static int wordCount(String s) {
         if (s == null) return 0;
-        String[] parts = s.trim().split("\\s+");
-        return (s.trim().isEmpty()) ? 0 : parts.length;
+        String trimmed = s.trim();
+        if (trimmed.isEmpty()) return 0;
+        String[] parts = trimmed.split("\\s+");
+        return parts.length;
     }
 
     private static String truncate(String s, int max) {

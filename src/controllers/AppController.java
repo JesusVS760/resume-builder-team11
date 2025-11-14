@@ -2,6 +2,10 @@ package controllers;
 
 import services.AuthService;
 import services.TwilioService;
+import services.ResumeParserService;
+import services.ResumeTailoringService;
+import dao.ResumeDAO;
+import dao.TailoredResumeDAO;
 
 import ui.ResumeBuilderContainer;
 import ui.UploadPanel;
@@ -44,9 +48,34 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
     private void wireUpload() {
         UploadPanel up = view.getUploadPanel();
         if (up != null && uploadController == null) {
-            uploadController = new UploadController(view.getUploadPanel(), new services.ResumeParserService());
+            // Services
+            var parser = new services.ResumeParserService();
+            var tailoringService = new services.ResumeTailoringService();
+
+            // DAOs
+            var resumeDAO = new dao.ResumeDAO();
+            var tailoredResumeDAO = new dao.TailoredResumeDAO();
+
+            // Current logged-in user id (or -1 if not logged in)
+            int userId = -1;
+            try {
+                if (utils.Constants.Session.isLoggedIn()) {
+                    var u = utils.Constants.Session.getCurrentUser();
+                    userId = Integer.parseInt(u.getId());
+                }
+            } catch (Throwable ignored) {}
+
+            uploadController = new UploadController(
+                    up,
+                    parser,
+                    tailoringService,
+                    resumeDAO,
+                    tailoredResumeDAO,
+                    userId
+            );
         }
     }
+
 
     // Auth helpers
     private boolean isLoggedIn() {

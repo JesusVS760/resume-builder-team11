@@ -7,14 +7,15 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.*;
 import java.io.File;
+import java.io.FileWriter;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import javax.swing.plaf.basic.BasicButtonUI;
 
 public class UploadPanel extends JPanel {
 
@@ -267,22 +268,13 @@ public class UploadPanel extends JPanel {
                 try {
                     String result = get();
 
-                    // Display results in a dialog
-                    JTextArea resultArea = new JTextArea(result);
-                    resultArea.setEditable(false);
-                    resultArea.setLineWrap(true);
-                    resultArea.setWrapStyleWord(true);
-                    resultArea.setCaretPosition(0);
+                    // Parse the result to separate feedback from tailored content
+                    String[] sections = parseResult(result);
+                    String feedback = sections[0];  // Match score, summary, comments
+                    String tailoredResume = sections[1];  // Clean resume text
 
-                    JScrollPane scrollPane = new JScrollPane(resultArea);
-                    scrollPane.setPreferredSize(new Dimension(700, 500));
-
-                    JOptionPane.showMessageDialog(
-                            UploadPanel.this,
-                            scrollPane,
-                            "Tailored Resume Result",
-                            JOptionPane.INFORMATION_MESSAGE
-                    );
+                    // Create split panel dialog
+                    showSplitResultDialog(feedback, tailoredResume);
 
                     setStatus("Resume tailored successfully!");
 
@@ -297,6 +289,184 @@ public class UploadPanel extends JPanel {
         if (onBuild != null) {
             onBuild.accept(selectedFile, jobDesc);
         }
+    }
+
+    /**
+     * Parse the result string to separate feedback from tailored resume
+     */
+    private String[] parseResult(String result) {
+        StringBuilder feedback = new StringBuilder();
+        StringBuilder tailoredResume = new StringBuilder();
+
+        String[] lines = result.split("\n");
+        boolean inResumeSection = false;
+        boolean foundFirstResumeHeader = false;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+
+            // Skip empty lines at the beginning
+            if (!foundFirstResumeHeader && trimmed.isEmpty()) {
+                continue;
+            }
+
+            // Feedback indicators - always goes to left panel
+            if (trimmed.startsWith("Job Match Score:") ||
+                    trimmed.startsWith("Keywords Matched:") ||
+                    trimmed.contains("indicates strong alignment") ||
+                    trimmed.startsWith("Summary:") ||
+                    trimmed.startsWith("Comments:")) {
+                feedback.append(line).append("\n");
+                inResumeSection = false;
+                continue;
+            }
+
+            // Detect first resume header (person's name or all-caps section)
+            // This marks the start of actual resume content
+            if (!foundFirstResumeHeader) {
+                // Look for name line (mixed case, reasonable length) or section headers (all caps)
+                if ((trimmed.length() > 2 && trimmed.length() < 50 &&
+                        !trimmed.contains(":") && !trimmed.contains("★")) ||
+                        (trimmed.matches("^[A-Z\\s]{3,}$") && trimmed.length() > 2)) {
+                    foundFirstResumeHeader = true;
+                    inResumeSection = true;
+                }
+            }
+
+            // Once in resume section, process each line
+            if (foundFirstResumeHeader) {
+                // Remove ★ symbols from resume content
+                String cleanLine = line.replace("★", "").trim();
+
+                // Skip lines that are purely commentary
+                if (cleanLine.toLowerCase().startsWith("comment:") ||
+                        cleanLine.toLowerCase().startsWith("note:") ||
+                        cleanLine.toLowerCase().startsWith("suggestion:")) {
+                    feedback.append(line).append("\n");
+                    continue;
+                }
+
+                // Add to resume, preserving formatting
+                if (cleanLine.isEmpty()) {
+                    tailoredResume.append("\n");
+                } else {
+                    tailoredResume.append(cleanLine).append("\n");
+                }
+            } else {
+                // Before resume starts, everything is feedback
+                feedback.append(line).append("\n");
+            }
+        }
+
+        return new String[] { feedback.toString().trim(), tailoredResume.toString().trim() };
+    }
+
+    /**
+     * Show dialog with feedback panel on left and tailored resume on right
+     */
+    private void showSplitResultDialog(String feedback, String tailoredResume) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
+                "Tailored Resume Result", true);
+        dialog.setLayout(new BorderLayout());
+
+        // Create split pane
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setDividerLocation(300); // Left panel width
+        splitPane.setResizeWeight(0.3); // 30% for feedback, 70% for resume
+
+        // LEFT PANEL: Feedback
+        JPanel feedbackPanel = createFeedbackPanel(feedback);
+        splitPane.setLeftComponent(feedbackPanel);
+
+        // RIGHT PANEL: Tailored Resume (clean, downloadable)
+        JPanel resumePanel = createResumePanel(tailoredResume);
+        splitPane.setRightComponent(resumePanel);
+
+        dialog.add(splitPane, BorderLayout.CENTER);
+
+        // Bottom button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        buttonPanel.setBackground(BG_WHITE);
+
+        JButton closeBtn = new JButton("Close");
+        styleSecondary(closeBtn);
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(closeBtn);
+
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setSize(1000, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Create feedback panel (left side)
+     */
+    private JPanel createFeedbackPanel(String feedback) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(0xF9FAFB));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_NEUTRAL),
+                new EmptyBorder(15, 15, 15, 15)
+        ));
+
+        // Title
+        JLabel titleLabel = new JLabel("Analysis & Feedback");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        // Feedback text area
+        JTextArea feedbackArea = new JTextArea(feedback);
+        feedbackArea.setEditable(false);
+        feedbackArea.setLineWrap(true);
+        feedbackArea.setWrapStyleWord(true);
+        feedbackArea.setBackground(new Color(0xF9FAFB));
+        feedbackArea.setForeground(TEXT_PRIMARY);
+        feedbackArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        feedbackArea.setCaretPosition(0);
+
+        JScrollPane scrollPane = new JScrollPane(feedbackArea);
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_NEUTRAL));
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    /**
+     * Create resume panel (right side - clean for future download)
+     */
+    private JPanel createResumePanel(String tailoredResume) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        // Title
+        JLabel titleLabel = new JLabel("Tailored Resume");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        // Resume text area
+        JTextArea resumeArea = new JTextArea(tailoredResume);
+        resumeArea.setEditable(false);
+        resumeArea.setLineWrap(true);
+        resumeArea.setWrapStyleWord(true);
+        resumeArea.setBackground(Color.WHITE);
+        resumeArea.setForeground(TEXT_PRIMARY);
+        resumeArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        resumeArea.setCaretPosition(0);
+
+        JScrollPane scrollPane = new JScrollPane(resumeArea);
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_NEUTRAL));
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
     }
 
     private void pasteFromClipboard() {

@@ -107,7 +107,7 @@ public class ResumeParserService {
     /**
      * Extracts text based on file type.
      */
-    private String extractText(File file) throws IOException {
+    public String extractText(File file) throws IOException {
         String fileName = file.getName().toLowerCase();
         if (fileName.endsWith(".pdf")) {
             return extractTextFromPDF(file);

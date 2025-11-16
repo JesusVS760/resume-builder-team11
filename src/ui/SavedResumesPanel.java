@@ -24,6 +24,8 @@ public class SavedResumesPanel extends JPanel {
     private Runnable onSortByName;
     private Consumer<Resume> onEdit;
     private Consumer<Resume> onDelete;
+    private Consumer<Resume> onExportPdf;
+    private Consumer<Resume> onExportDocx;
 
     public SavedResumesPanel() {
         setLayout(new BorderLayout());
@@ -203,6 +205,14 @@ public class SavedResumesPanel extends JPanel {
         this.onDelete = onDelete;
     }
 
+    public void setOnExportPdf(Consumer<Resume> onExportPdf) {
+        this.onExportPdf = onExportPdf;
+    }
+
+    public void setOnExportDocx(Consumer<Resume> onExportDocx) {
+        this.onExportDocx = onExportDocx;
+    }
+
 
     private JComponent createResumeCard(Resume resume) {
         JPanel card = new JPanel(new BorderLayout(16, 0));
@@ -274,14 +284,26 @@ public class SavedResumesPanel extends JPanel {
         JPopupMenu menu = new JPopupMenu();
         JMenuItem editItem = new JMenuItem("Edit");
         JMenuItem deleteItem = new JMenuItem("Delete");
+        JMenuItem exportPdfItem = new JMenuItem("Export (PDF)");
+        JMenuItem exportDocxItem = new JMenuItem("Export (DOCX)");
+        
         menu.add(editItem);
         menu.add(deleteItem);
+        menu.addSeparator();
+        menu.add(exportPdfItem);
+        menu.add(exportDocxItem);
 
         editItem.addActionListener(e -> {
             if (onEdit != null) onEdit.accept(resume);
         });
         deleteItem.addActionListener(e -> {
             if (onDelete != null) onDelete.accept(resume);
+        });
+        exportPdfItem.addActionListener(e -> {
+            if (onExportPdf != null) onExportPdf.accept(resume);
+        });
+        exportDocxItem.addActionListener(e -> {
+            if (onExportDocx != null) onExportDocx.accept(resume);
         });
 
         menuBtn.addActionListener(e ->

@@ -2,6 +2,7 @@ package controllers;
 
 import dao.ResumeDAO;
 import models.Resume;
+import services.ExportService;
 import ui.SavedResumesPanel;
 
 import javax.swing.*;
@@ -15,6 +16,7 @@ import java.util.List;
 public class SavedResumesController extends BaseController<SavedResumesPanel> {
 
     private final ResumeDAO resumeDAO;
+    private final ExportService exportService;
 
     private enum SortMode { DATE_DESC, NAME_ASC }
     private SortMode sortMode = SortMode.DATE_DESC;
@@ -22,6 +24,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
     public SavedResumesController(SavedResumesPanel view, ResumeDAO resumeDAO) {
         super(view);
         this.resumeDAO = resumeDAO;
+        this.exportService = new ExportService();
 
         attach();
         reload();
@@ -92,6 +95,111 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
                 }
             }
         });
+
+        view.setOnExportPdf(resume -> handleExportPdf(resume));
+        view.setOnExportDocx(resume -> handleExportDocx(resume));
+    }
+
+    private void handleExportPdf(Resume resume) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Export Resume as PDF");
+        chooser.setSelectedFile(new File(exportService.getSuggestedFileName(resume, "pdf")));
+        
+        int result = chooser.showSaveDialog(view);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File outputFile = chooser.getSelectedFile();
+            String path = outputFile.getAbsolutePath();
+            
+            // Ensure .pdf extension
+            if (!path.toLowerCase().endsWith(".pdf")) {
+                path += ".pdf";
+            }
+            
+            // Check if file exists and confirm overwrite
+            File checkFile = new File(path);
+            if (checkFile.exists()) {
+                int overwrite = JOptionPane.showConfirmDialog(
+                        view,
+                        "File already exists. Do you want to overwrite it?\n" + path,
+                        "File Exists",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+                if (overwrite != JOptionPane.YES_OPTION) {
+                    return; // User cancelled
+                }
+                // Delete existing file to allow overwrite
+                checkFile.delete();
+            }
+            
+            boolean success = exportService.exportToPDF(resume, path);
+            if (success) {
+                JOptionPane.showMessageDialog(
+                        view,
+                        "Resume exported successfully to:\n" + path,
+                        "Export Successful",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } else {
+                JOptionPane.showMessageDialog(
+                        view,
+                        "Failed to export resume to PDF.",
+                        "Export Failed",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
+    }
+
+    private void handleExportDocx(Resume resume) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Export Resume as DOCX");
+        chooser.setSelectedFile(new File(exportService.getSuggestedFileName(resume, "docx")));
+        
+        int result = chooser.showSaveDialog(view);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File outputFile = chooser.getSelectedFile();
+            String path = outputFile.getAbsolutePath();
+            
+            // Ensure .docx extension
+            if (!path.toLowerCase().endsWith(".docx")) {
+                path += ".docx";
+            }
+            
+            // Check if file exists and confirm overwrite
+            File checkFile = new File(path);
+            if (checkFile.exists()) {
+                int overwrite = JOptionPane.showConfirmDialog(
+                        view,
+                        "File already exists. Do you want to overwrite it?\n" + path,
+                        "File Exists",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+                if (overwrite != JOptionPane.YES_OPTION) {
+                    return; // User cancelled
+                }
+                // Delete existing file to allow overwrite
+                checkFile.delete();
+            }
+            
+            boolean success = exportService.exportToDOCX(resume, path);
+            if (success) {
+                JOptionPane.showMessageDialog(
+                        view,
+                        "Resume exported successfully to:\n" + path,
+                        "Export Successful",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } else {
+                JOptionPane.showMessageDialog(
+                        view,
+                        "Failed to export resume to DOCX.",
+                        "Export Failed",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
     }
 
     private void handleUploadClicked() {

@@ -10,3 +10,4 @@ out/
 .env
 *.txt
 !meetingnotes/*.txt
+uploads/

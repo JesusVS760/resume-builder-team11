@@ -4,6 +4,7 @@
 TailoredResumeBuilder/
 ├── build/                     # Compiled .class files (generates the folder with the .class files in it locally when running)
 ├── database/                  # SQLite database (only local for testing, creates database.db the in folder when running)
+├── uploads/                   # Folder is created locally when running program, stores saved resumes
 ├── lib/                       # External JAR libraries
 ├── meetingnotes/              # Meeting notes
 ├── resources/                 # Database schema and resources

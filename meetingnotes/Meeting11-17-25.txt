@@ -1,0 +1,4 @@
+Added feedback and analysis for tailoring resume functionality
+Need to improve the logic for the feedback and analysis
+Exporting resume for pdf and docx added
+Need to implement editing resume

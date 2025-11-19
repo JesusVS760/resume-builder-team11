@@ -12,7 +12,6 @@ import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.*;
 import java.io.File;
-import java.io.FileWriter;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;

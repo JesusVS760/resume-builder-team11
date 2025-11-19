@@ -99,6 +99,11 @@ public class ProfileFrame extends JFrame {
         }
     }
 
+    // Expose the logout button so the controller can style it
+    public JButton getLogoutButton() {
+        return logoutButton;
+    }
+
     // MVC controller hooks
     public void setOnBack(java.awt.event.ActionListener l)   { if (backButton != null) backButton.addActionListener(l); }
     public void setOnLogout(java.awt.event.ActionListener l) { if (logoutButton != null) logoutButton.addActionListener(l); }

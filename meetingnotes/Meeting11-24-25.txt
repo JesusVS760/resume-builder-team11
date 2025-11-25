@@ -1,0 +1,3 @@
+-Improved the tailoring resume service but need to still improve it
+-Need to improve ui, get rid of settings page and update the profile and home page
+-Need to finish the edit resume function

@@ -1,9 +1,13 @@
 package services;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.regex.*;
 
+/**
+ * ResumeTailoringService formats and tailors resumes to a specific job description.
+ */
 public class ResumeTailoringService {
 
     private static final Set<String> STOPWORDS = Set.of(
@@ -49,10 +53,6 @@ public class ResumeTailoringService {
 
     /**
      * Generates a complete, professionally formatted tailored resume.
-     *
-     * @param parsedResume Parsed resume object from {@link ResumeParserService}.
-     * @param jobDescription Full text of the job posting.
-     * @return Complete tailored resume document.
      */
     public String tailorResume(ResumeParserService.ParsedResume parsedResume, String jobDescription) {
         if (parsedResume == null || parsedResume.getFullText() == null) {
@@ -79,22 +79,20 @@ public class ResumeTailoringService {
         StringBuilder resume = new StringBuilder();
         Map<String, String> sections = parsedResume.getSections();
 
-        // 1. HEADER - Extract name and contact info
+        // HEADER
         String header = extractHeader(parsedResume.getFullText());
         if (header != null && !header.trim().isEmpty()) {
             resume.append(header);
             resume.append("\n").append(repeatChar('═', 80)).append("\n\n");
         }
 
-        // 2. PROFESSIONAL SUMMARY
+        // PROFESSIONAL SUMMARY
         String summary = sections.get("summary");
         if (summary != null && !summary.trim().isEmpty()) {
             resume.append("PROFESSIONAL SUMMARY\n");
             resume.append(repeatChar('─', 80)).append("\n");
-            String formattedSummary = formatSummary(summary, matchedKeywords);
-            resume.append(formattedSummary).append("\n\n");
+            resume.append(formatSummary(summary, matchedKeywords)).append("\n\n");
         } else if (!matchedKeywords.isEmpty()) {
-            // Create a summary from matched keywords
             resume.append("PROFESSIONAL SUMMARY\n");
             resume.append(repeatChar('─', 80)).append("\n");
             resume.append("Results-driven professional with expertise in ");
@@ -102,81 +100,97 @@ public class ResumeTailoringService {
                     .limit(8)
                     .map(this::capitalize)
                     .collect(Collectors.joining(", ")));
-            resume.append(". Proven track record of delivering high-quality solutions and ");
-            resume.append("driving business success through technical excellence.\n\n");
+            resume.append(". Proven track record of delivering high-quality solutions and driving business success.\n\n");
         }
 
-        // 3. CORE COMPETENCIES / SKILLS
+        // CORE COMPETENCIES / SKILLS
         String skills = sections.get("skills");
         if (skills != null && !skills.trim().isEmpty()) {
             resume.append("CORE COMPETENCIES\n");
             resume.append(repeatChar('─', 80)).append("\n");
-            resume.append(formatSkillsSection(skills, matchedKeywords));
-            resume.append("\n");
+            String formattedSkills = formatSkillsSection(skills, matchedKeywords);
+            if (!formattedSkills.trim().isEmpty()) {
+                resume.append(formattedSkills).append("\n");
+            }
         }
 
-        // 4. PROFESSIONAL EXPERIENCE
+        // PROFESSIONAL EXPERIENCE
+        // Check multiple possible keys for experience section
         String experience = sections.get("experience");
+        if (experience == null || experience.trim().isEmpty()) {
+            experience = sections.get("work experience");
+        }
+        if (experience == null || experience.trim().isEmpty()) {
+            experience = sections.get("professional experience");
+        }
+
+        boolean hasExperience = false;
+
         if (experience != null && !experience.trim().isEmpty()) {
             resume.append("PROFESSIONAL EXPERIENCE\n");
             resume.append(repeatChar('─', 80)).append("\n");
             resume.append(formatExperienceSection(experience, matchedKeywords));
-            resume.append("\n");
+            hasExperience = true;
         } else if (!parsedResume.getExperiences().isEmpty()) {
             resume.append("PROFESSIONAL EXPERIENCE\n");
             resume.append(repeatChar('─', 80)).append("\n");
-            for (String exp : parsedResume.getExperiences()) {
-                resume.append(formatExperienceEntry(exp, matchedKeywords));
-                resume.append("\n");
+            Set<String> seen = new HashSet<>();
+            for (int i = 0; i < parsedResume.getExperiences().size(); i++) {
+                String exp = parsedResume.getExperiences().get(i);
+                if (!seen.contains(exp.trim())) {
+                    resume.append(formatExperienceEntry(exp, matchedKeywords));
+                    if (i < parsedResume.getExperiences().size() - 1) {
+                        resume.append("\n");
+                    }
+                    seen.add(exp.trim());
+                }
             }
-            resume.append("\n");
+            hasExperience = true;
         }
 
-        // 5. EDUCATION
+        // If still no experience, try projects section as fallback
+        if (!hasExperience) {
+            String projects = sections.get("projects");
+            if (projects != null && !projects.trim().isEmpty()) {
+                resume.append("PROFESSIONAL EXPERIENCE\n");
+                resume.append(repeatChar('─', 80)).append("\n");
+                resume.append(formatExperienceSection(projects, matchedKeywords));
+                hasExperience = true;
+            }
+        }
+
+        // EDUCATION
         String education = sections.get("education");
         if (education != null && !education.trim().isEmpty()) {
-            resume.append("EDUCATION\n");
+            resume.append("\nEDUCATION\n");
             resume.append(repeatChar('─', 80)).append("\n");
-            resume.append(formatEducationSection(education));
-            resume.append("\n");
+            resume.append(formatEducationSection(education)).append("\n");
         }
 
-        // 6. CERTIFICATIONS
+        // CERTIFICATIONS
         String certifications = sections.get("certifications");
         if (certifications != null && !certifications.trim().isEmpty()) {
             resume.append("CERTIFICATIONS\n");
             resume.append(repeatChar('─', 80)).append("\n");
-            resume.append(formatBulletSection(certifications));
-            resume.append("\n");
+            resume.append(formatBulletSection(certifications)).append("\n");
         }
 
-        // 7. PROJECTS
-        String projects = sections.get("projects");
-        if (projects != null && !projects.trim().isEmpty()) {
-            resume.append("KEY PROJECTS\n");
-            resume.append(repeatChar('─', 80)).append("\n");
-            resume.append(formatProjectsSection(projects, matchedKeywords));
-            resume.append("\n");
-        }
-
-        // 8. ADDITIONAL SECTIONS
-        String[] additionalSections = {"awards", "publications", "volunteer", "languages", "interests"};
-        for (String sectionKey : additionalSections) {
-            String content = sections.get(sectionKey);
-            if (content != null && !content.trim().isEmpty()) {
-                resume.append(sectionKey.toUpperCase()).append("\n");
+        // PROJECTS (only if not already included in experience)
+        if (!hasExperience) {
+            String projects = sections.get("projects");
+            if (projects != null && !projects.trim().isEmpty()) {
+                resume.append("KEY PROJECTS\n");
                 resume.append(repeatChar('─', 80)).append("\n");
-                resume.append(formatBulletSection(content));
-                resume.append("\n");
+                resume.append(formatProjectsSection(projects, matchedKeywords));
             }
         }
 
-        // 9. FOOTER with Match Score
-        resume.append(repeatChar('═', 80)).append("\n");
+        // FOOTER with Match Score
+        resume.append("\n").append(repeatChar('═', 80)).append("\n");
         if (!matchedKeywords.isEmpty() && jobDescription != null && !jobDescription.trim().isEmpty()) {
             double matchScore = calculatedMatchScore(parsedResume.getFullText(), jobDescription);
             List<String> allJobKeywords = analyzeJobDescription(jobDescription);
-            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d/%d | ★ indicates strong alignment with requirements\n",
+            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d/%d | ★ indicates strong alignment\n",
                     matchScore, matchedKeywords.size(), allJobKeywords.size()));
         } else {
             resume.append("★ indicates strong alignment with requirements\n");
@@ -185,61 +199,48 @@ public class ResumeTailoringService {
         return resume.toString();
     }
 
-    /**
-     * Extracts header (name and contact info) from resume
-     */
+    // ---------------- Helper Methods ----------------
+
     private String extractHeader(String resumeText) {
         String[] lines = resumeText.split("\n");
         StringBuilder header = new StringBuilder();
 
-        // First 5-10 lines usually contain header info
         int headerLines = 0;
         for (int i = 0; i < Math.min(10, lines.length) && headerLines < 6; i++) {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
-
-            // Stop at first section header
             if (isSectionHeader(line)) break;
-
-            // Center-align name (first substantial line)
-            if (headerLines == 0 && line.length() > 3) {
-                header.append(centerText(line.toUpperCase(), 80)).append("\n");
-            } else {
-                header.append(centerText(line, 80)).append("\n");
-            }
+            if (headerLines == 0 && line.length() > 3) header.append(centerText(line.toUpperCase(), 80)).append("\n");
+            else header.append(centerText(line, 80)).append("\n");
             headerLines++;
         }
 
         return header.toString();
     }
 
-    /**
-     * Formats the professional summary with keyword enhancement
-     */
     private String formatSummary(String summary, List<String> matchedKeywords) {
-        // Clean up the summary
         String cleaned = summary.trim().replaceAll("\\s+", " ");
-
-        // Wrap at 80 characters
         return wrapText(cleaned, 80);
     }
 
     /**
-     * Formats skills section with columns and highlighting
+     * FIXED: Properly formats skills - extracts clean skills and formats in readable columns
      */
     private String formatSkillsSection(String skills, List<String> matchedKeywords) {
-        StringBuilder formatted = new StringBuilder();
-
-        // Extract individual skills
         List<String> skillList = extractSkills(skills);
 
-        // Sort: matched skills first
+        // Remove duplicates and empty entries
+        skillList = skillList.stream()
+                .distinct()
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+
         List<String> matched = new ArrayList<>();
         List<String> unmatched = new ArrayList<>();
 
         for (String skill : skillList) {
             boolean isMatched = matchedKeywords.stream()
-                    .anyMatch(kw -> skill.toLowerCase().contains(kw));
+                    .anyMatch(kw -> skill.toLowerCase().contains(kw.toLowerCase()));
             if (isMatched) {
                 matched.add("★ " + skill);
             } else {
@@ -247,261 +248,247 @@ public class ResumeTailoringService {
             }
         }
 
-        // Combine and display in 3 columns
-        List<String> allSkills = new ArrayList<>(matched);
+        // Combine matched skills first, then unmatched
+        List<String> allSkills = new ArrayList<>();
+        allSkills.addAll(matched);
         allSkills.addAll(unmatched);
 
-        for (int i = 0; i < allSkills.size(); i += 3) {
-            StringBuilder row = new StringBuilder();
-            for (int j = i; j < Math.min(i + 3, allSkills.size()); j++) {
-                row.append(String.format("%-26s", allSkills.get(j)));
+        StringBuilder formatted = new StringBuilder();
+
+        // Format in 2 columns for better readability
+        for (int i = 0; i < allSkills.size(); i += 2) {
+            String skill1 = allSkills.get(i);
+            formatted.append(skill1);
+
+            // Add proper spacing to reach column 2
+            int padding = 38 - skill1.length();
+            if (padding > 0) {
+                formatted.append(" ".repeat(padding));
             }
-            formatted.append(row.toString().trim()).append("\n");
+
+            if (i + 1 < allSkills.size()) {
+                String skill2 = allSkills.get(i + 1);
+                formatted.append(skill2);
+            }
+            formatted.append("\n");
         }
 
         return formatted.toString();
     }
 
     /**
-     * Extracts individual skills from skills text
+     * FIXED: Better skill extraction - handles categories, semicolons, commas, bullets and merges fragments
      */
     private List<String> extractSkills(String skillsText) {
+        // First normalize: replace newlines and multiple spaces with single space
+        String normalized = skillsText.replaceAll("\\s+", " ").trim();
+
+        // Remove existing bullets
+        normalized = normalized.replaceAll("[•★●■▪]", " ");
+
+        // Clean up multiple spaces and ampersands at the start
+        normalized = normalized.replaceAll("\\s+", " ").replaceAll("^[&\\s]+", "").trim();
+
+        // Fix common fragmented skills
+        normalized = normalized.replaceAll("Problem\\s+solving", "Problem-solving");
+
+        // Handle category-based format (e.g., "Languages: JavaScript, Python")
+        // Remove category labels but keep the skills
+        normalized = normalized.replaceAll("(Languages|Frameworks|Tools|APIs?\\s*&?\\s*Services|Skills|Technologies)\\s*:\\s*", "");
+
+        // Split by semicolons, commas, and pipes
+        String[] parts = normalized.split("[;,|]+");
+
         List<String> skills = new ArrayList<>();
 
-        // Split by common delimiters
-        String[] parts = skillsText.split("[,•\n|]+");
-
         for (String part : parts) {
-            String skill = part.trim()
-                    .replaceAll("^[-•*]\\s*", "")  // Remove leading bullets
-                    .replaceAll("\\s+", " ");       // Normalize spaces
+            String skill = part.trim();
 
-            if (!skill.isEmpty() && skill.length() > 2 && skill.length() < 50) {
-                skills.add(skill);
+            // Remove any leading dashes or special chars
+            skill = skill.replaceAll("^[-–—&\\s]+", "").trim();
+
+            // Skip invalid entries
+            if (skill.isEmpty() || skill.length() < 2 || skill.length() > 60 ||
+                    skill.equals("&") || skill.matches("^(solving|Communication|communication)$")) {
+                continue;
             }
+
+            // Skip if it's just a category label that wasn't caught
+            if (skill.matches("(?i)(languages|frameworks|tools|apis?\\s*&?\\s*services|skills|technologies)")) {
+                continue;
+            }
+
+            skills.add(skill);
         }
 
         return skills;
     }
 
     /**
-     * Formats the experience section with professional bullet points
+     * FIXED: Properly identifies and separates distinct project/job experiences
      */
     private String formatExperienceSection(String experience, List<String> matchedKeywords) {
         StringBuilder formatted = new StringBuilder();
+        List<String> projects = splitIntoProjects(experience);
 
-        // Split into individual job entries
-        List<String> jobs = splitIntoJobs(experience);
+        for (int i = 0; i < projects.size(); i++) {
+            String project = projects.get(i).trim();
+            if (!project.isEmpty()) {
+                formatted.append(formatSingleProject(project, matchedKeywords));
 
-        for (String job : jobs) {
-            formatted.append(formatExperienceEntry(job, matchedKeywords));
-            formatted.append("\n");
+                // Add blank line between projects (but not after last one)
+                if (i < projects.size() - 1) {
+                    formatted.append("\n");
+                }
+            }
         }
 
         return formatted.toString();
     }
 
     /**
-     * Formats a single job experience entry with bullet points
+     * FIXED: Splits experience text into distinct projects by identifying project titles
      */
-    private String formatExperienceEntry(String jobText, List<String> matchedKeywords) {
+    private List<String> splitIntoProjects(String experience) {
+        List<String> projects = new ArrayList<>();
+
+        // Pattern to match project titles (usually start with capital letter, end with dash or colon)
+        Pattern projectPattern = Pattern.compile("^([A-Z][^\\n-]+ -|[A-Z][^\\n:]+:)", Pattern.MULTILINE);
+        Matcher matcher = projectPattern.matcher(experience);
+
+        List<Integer> starts = new ArrayList<>();
+        while (matcher.find()) {
+            starts.add(matcher.start());
+        }
+
+        if (starts.isEmpty()) {
+            // No clear project boundaries, treat as one
+            projects.add(experience);
+        } else {
+            // Split at project boundaries
+            for (int i = 0; i < starts.size(); i++) {
+                int start = starts.get(i);
+                int end = (i + 1 < starts.size()) ? starts.get(i + 1) : experience.length();
+                String project = experience.substring(start, end).trim();
+                if (!project.isEmpty()) {
+                    projects.add(project);
+                }
+            }
+        }
+
+        return projects;
+    }
+
+    /**
+     * FIXED: Formats a single project with title and bullet points clearly separated
+     */
+    private String formatSingleProject(String projectText, List<String> matchedKeywords) {
         StringBuilder formatted = new StringBuilder();
-        String[] lines = jobText.split("\n");
 
-        if (lines.length == 0) return "";
+        String[] lines = projectText.split("\n");
+        String projectTitle = null;
+        int contentStartIndex = 0;
 
-        // Check if this job is relevant
-        boolean isRelevant = matchedKeywords.stream()
-                .filter(kw -> kw.length() > 3)
-                .anyMatch(kw -> jobText.toLowerCase().contains(kw));
-
-        // First line: Job Title
-        String firstLine = lines[0].trim();
-        if (!firstLine.isEmpty()) {
-            formatted.append(isRelevant ? "★ " : "").append(firstLine).append("\n");
-        }
-
-        // Extract company, location, dates from second/third lines
-        boolean foundMetadata = false;
-        for (int i = 1; i < Math.min(3, lines.length); i++) {
-            String line = lines[i].trim();
-            if (line.isEmpty()) continue;
-
-            // Look for dates (contains year like 2020, 2021, etc.)
-            if (line.matches(".*\\b20\\d{2}\\b.*") || line.toLowerCase().contains("present")) {
-                formatted.append(line).append("\n");
-                foundMetadata = true;
-            } else if (!foundMetadata && line.length() > 5) {
-                formatted.append(line).append("\n");
-            }
-        }
-
-        formatted.append("\n");
-
-        // Rest of lines: convert to bullet points
-        int startIdx = foundMetadata ? 3 : 2;
-        List<String> bullets = new ArrayList<>();
-        StringBuilder currentBullet = new StringBuilder();
-
-        for (int i = startIdx; i < lines.length; i++) {
-            String line = lines[i].trim();
-            if (line.isEmpty()) {
-                if (currentBullet.length() > 0) {
-                    bullets.add(currentBullet.toString());
-                    currentBullet = new StringBuilder();
-                }
-                continue;
-            }
-
-            // Check if line starts with bullet or is a new point
-            if (line.matches("^[•●■▪-].*") ||
-                    (currentBullet.length() == 0 && line.length() > 10)) {
-                if (currentBullet.length() > 0) {
-                    bullets.add(currentBullet.toString());
-                }
-                currentBullet = new StringBuilder(line.replaceAll("^[•●■▪-]\\s*", ""));
-            } else {
-                // Continuation of previous bullet
-                if (currentBullet.length() > 0) {
-                    currentBullet.append(" ").append(line);
+        // Extract project title (usually first line with " - " or ending with ":")
+        if (lines.length > 0) {
+            String firstLine = lines[0].trim();
+            if (firstLine.contains(" - ") || firstLine.endsWith(":")) {
+                // Extract just the title part (before " - " or ":")
+                if (firstLine.contains(" - ")) {
+                    projectTitle = firstLine.substring(0, firstLine.indexOf(" - ")).trim();
                 } else {
-                    currentBullet.append(line);
+                    projectTitle = firstLine.replace(":", "").trim();
                 }
+                contentStartIndex = 1;
             }
         }
 
-        if (currentBullet.length() > 0) {
-            bullets.add(currentBullet.toString());
+        // Add project title on its own line
+        if (projectTitle != null && !projectTitle.isEmpty()) {
+            formatted.append(projectTitle).append("\n");
         }
 
-        // Format bullets
+        // Gather all content after title
+        StringBuilder allContent = new StringBuilder();
+        for (int i = contentStartIndex; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (!line.isEmpty()) {
+                // Remove existing bullets
+                line = line.replaceAll("^[•★●■▪-]\\s*", "");
+
+                if (allContent.length() > 0 && !allContent.toString().endsWith(" ")) {
+                    allContent.append(" ");
+                }
+                allContent.append(line);
+            }
+        }
+
+        // Split content into sentences for bullets
+        String content = allContent.toString();
+        List<String> bullets = new ArrayList<>();
+
+        // Split by periods followed by space and capital letter (sentence boundaries)
+        String[] sentences = content.split("(?<=\\.)\\s+(?=[A-Z])");
+
+        for (String sentence : sentences) {
+            sentence = sentence.trim();
+            if (!sentence.isEmpty()) {
+                // Ensure ends with period
+                if (!sentence.endsWith(".")) {
+                    sentence += ".";
+                }
+                bullets.add(sentence);
+            }
+        }
+
+        // Format bullets with matched keyword highlighting
         for (String bullet : bullets) {
-            String cleaned = bullet.trim().replaceAll("\\s+", " ");
-            if (cleaned.length() > 10) {  // Minimum bullet length
-                // Check if bullet contains matched keywords
-                boolean bulletMatched = matchedKeywords.stream()
-                        .anyMatch(kw -> cleaned.toLowerCase().contains(kw));
+            if (bullet.isEmpty()) continue;
 
-                String prefix = bulletMatched ? "  ★ " : "  • ";
-                formatted.append(wrapBullet(prefix + cleaned, 80, prefix.length()));
-                formatted.append("\n");
-            }
+            boolean isMatched = matchedKeywords.stream()
+                    .anyMatch(kw -> bullet.toLowerCase().contains(kw.toLowerCase()));
+
+            String prefix = isMatched ? "★ " : "• ";
+            formatted.append(wrapBullet(prefix + bullet, 80, 2)).append("\n");
         }
 
         return formatted.toString();
     }
 
-    /**
-     * Splits experience text into individual job entries
-     */
-    private List<String> splitIntoJobs(String experience) {
-        List<String> jobs = new ArrayList<>();
-        String[] lines = experience.split("\n");
+    private String formatExperienceEntry(String text, List<String> matchedKeywords) {
+        return formatSingleProject(text, matchedKeywords);
+    }
 
-        StringBuilder currentJob = new StringBuilder();
+    private String formatProjectsSection(String projects, List<String> matchedKeywords) {
+        return formatExperienceSection(projects, matchedKeywords);
+    }
+
+    private String formatEducationSection(String education) {
+        StringBuilder formatted = new StringBuilder();
+        String[] lines = education.split("\n");
 
         for (String line : lines) {
             String trimmed = line.trim();
-
-            // Detect job title (capitalized line, not too long, not a bullet)
-            boolean isJobTitle = trimmed.length() > 10 &&
-                    trimmed.length() < 80 &&
-                    Character.isUpperCase(trimmed.charAt(0)) &&
-                    !trimmed.matches("^[•●■▪-].*") &&
-                    (trimmed.matches(".*(?:Manager|Engineer|Developer|Director|Analyst|Specialist|Coordinator|Lead|Senior|Junior|Intern).*") ||
-                            currentJob.length() > 200);  // Start new job after enough content
-
-            if (isJobTitle && currentJob.length() > 100) {
-                jobs.add(currentJob.toString());
-                currentJob = new StringBuilder();
-            }
-
-            currentJob.append(line).append("\n");
-        }
-
-        if (currentJob.length() > 0) {
-            jobs.add(currentJob.toString());
-        }
-
-        return jobs.isEmpty() ? Collections.singletonList(experience) : jobs;
-    }
-
-    /**
-     * Formats education section
-     */
-    private String formatEducationSection(String education) {
-        StringBuilder formatted = new StringBuilder();
-        String[] entries = education.split("\n\n+");
-
-        for (String entry : entries) {
-            if (entry.trim().isEmpty()) continue;
-
-            String[] lines = entry.trim().split("\n");
-            for (String line : lines) {
-                String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    formatted.append(trimmed).append("\n");
-                }
-            }
-            formatted.append("\n");
-        }
-
-        return formatted.toString();
-    }
-
-    /**
-     * Formats projects section with bullet points
-     */
-    private String formatProjectsSection(String projects, List<String> matchedKeywords) {
-        StringBuilder formatted = new StringBuilder();
-        String[] entries = projects.split("\n\n+");
-
-        for (String entry : entries) {
-            if (entry.trim().isEmpty()) continue;
-
-            boolean isRelevant = matchedKeywords.stream()
-                    .anyMatch(kw -> entry.toLowerCase().contains(kw));
-
-            String[] lines = entry.trim().split("\n");
-            if (lines.length > 0) {
-                // Project title
-                formatted.append(isRelevant ? "★ " : "• ");
-                formatted.append(lines[0].trim()).append("\n");
-
-                // Project details
-                for (int i = 1; i < lines.length; i++) {
-                    String line = lines[i].trim();
-                    if (!line.isEmpty()) {
-                        formatted.append("  ").append(line).append("\n");
-                    }
-                }
-                formatted.append("\n");
+            if (!trimmed.isEmpty()) {
+                formatted.append(trimmed).append("\n");
             }
         }
 
         return formatted.toString();
     }
 
-    /**
-     * Formats generic section with bullet points
-     */
     private String formatBulletSection(String content) {
         StringBuilder formatted = new StringBuilder();
         String[] lines = content.split("\n");
-
         for (String line : lines) {
             String trimmed = line.trim().replaceAll("^[•●■▪-]\\s*", "");
             if (!trimmed.isEmpty() && trimmed.length() > 3) {
                 formatted.append("• ").append(trimmed).append("\n");
             }
         }
-
         return formatted.toString();
     }
 
-    /**
-     * Wraps text at specified width
-     */
     private String wrapText(String text, int width) {
         StringBuilder wrapped = new StringBuilder();
         String[] words = text.split("\\s+");
@@ -523,22 +510,22 @@ public class ResumeTailoringService {
         return wrapped.toString();
     }
 
-    /**
-     * Wraps bullet point text with proper indentation
-     */
     private String wrapBullet(String text, int width, int indent) {
         StringBuilder wrapped = new StringBuilder();
         String[] words = text.split("\\s+");
         int lineLength = 0;
+        String indentStr = " ".repeat(indent);
         boolean firstLine = true;
 
         for (String word : words) {
             if (lineLength + word.length() + 1 > width) {
                 wrapped.append("\n");
                 if (!firstLine) {
-                    wrapped.append(repeatChar(' ', indent));
+                    wrapped.append(indentStr);
+                    lineLength = indent;
+                } else {
+                    lineLength = 0;
                 }
-                lineLength = firstLine ? 0 : indent;
                 firstLine = false;
             }
             if (lineLength > 0) {
@@ -552,21 +539,14 @@ public class ResumeTailoringService {
         return wrapped.toString();
     }
 
-    /**
-     * Centers text within specified width
-     */
     private String centerText(String text, int width) {
         if (text.length() >= width) return text;
         int padding = (width - text.length()) / 2;
-        return repeatChar(' ', padding) + text;
+        return " ".repeat(padding) + text;
     }
 
-    /**
-     * Checks if a line is a section header
-     */
     private boolean isSectionHeader(String line) {
         if (line.length() < 3 || line.length() > 50) return false;
-
         String[] sections = {
                 "SUMMARY", "OBJECTIVE", "PROFILE", "EXPERIENCE", "WORK EXPERIENCE",
                 "EMPLOYMENT", "SKILLS", "TECHNICAL SKILLS", "CORE COMPETENCIES",
@@ -574,13 +554,9 @@ public class ResumeTailoringService {
         };
 
         String upper = line.toUpperCase().replaceAll("[^A-Z\\s]", "").trim();
-
         for (String section : sections) {
-            if (upper.equals(section) || upper.startsWith(section)) {
-                return true;
-            }
+            if (upper.equals(section) || upper.startsWith(section)) return true;
         }
-
         return false;
     }
 
@@ -593,13 +569,9 @@ public class ResumeTailoringService {
         return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
 
-    /**
-     * Calculates a simple keyword match score between resume and job description.
-     */
     public double calculatedMatchScore(String resumeText, String jobDescription) {
         List<String> keywords = analyzeJobDescription(jobDescription);
         List<String> matched = mapKeywords(resumeText, keywords);
-
         if (keywords.isEmpty()) return 0.0;
         return (matched.size() / (double) keywords.size()) * 100.0;
     }

@@ -34,28 +34,28 @@ public class ExportService {
                 System.err.println("File already exists: " + outputPath);
                 return false; // Let controller handle the confirmation
             }
-            
+
             // For PDF export, simply copy the original file if it's already a PDF
             File sourceFile = new File(resume.getFilePath());
             String sourceName = sourceFile.getName().toLowerCase();
-            
+
             if (sourceName.endsWith(".pdf")) {
                 // Direct copy for PDF files - preserves exact formatting
-                Files.copy(sourceFile.toPath(), Paths.get(outputPath), 
-                          java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(sourceFile.toPath(), Paths.get(outputPath),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 System.out.println("✓ PDF exported successfully (copied): " + outputPath);
                 return true;
             }
-            
+
             // For DOCX/DOC files, create a new PDF with extracted text
             String content = readFileContent(resume.getFilePath());
-            
+
             PDDocument document = new PDDocument();
             PDPage page = new PDPage();
             document.addPage(page);
 
             PDPageContentStream contentStream = new PDPageContentStream(document, page);
-            
+
             // Set up font and starting position
             contentStream.setFont(PDType1Font.HELVETICA, 12);
             contentStream.beginText();
@@ -65,7 +65,7 @@ public class ExportService {
             if (content != null && !content.isEmpty()) {
                 // Remove carriage returns and other control characters
                 content = content.replace("\r", "").replace("\t", "    ");
-                
+
                 String[] lines = content.split("\n");
                 for (String line : lines) {
                     // Skip empty lines
@@ -73,10 +73,10 @@ public class ExportService {
                         contentStream.newLineAtOffset(0, -15);
                         continue;
                     }
-                    
+
                     // Remove any remaining control characters
                     line = line.replaceAll("[\\p{Cntrl}&&[^\n]]", "");
-                    
+
                     // Handle long lines by wrapping
                     if (line.length() > 80) {
                         String[] wrappedLines = wrapText(line, 80);
@@ -97,7 +97,7 @@ public class ExportService {
             // Save the document
             document.save(outputPath);
             document.close();
-            
+
             System.out.println("✓ PDF exported successfully: " + outputPath);
             return true;
 
@@ -122,25 +122,25 @@ public class ExportService {
                 System.err.println("File already exists: " + outputPath);
                 return false; // Let controller handle the confirmation
             }
-            
+
             // For DOCX export, simply copy the original file if it's already a DOCX
             File sourceFile = new File(resume.getFilePath());
             String sourceName = sourceFile.getName().toLowerCase();
-            
+
             if (sourceName.endsWith(".docx") || sourceName.endsWith(".doc")) {
                 // Direct copy for DOCX/DOC files - preserves exact formatting
-                Files.copy(sourceFile.toPath(), Paths.get(outputPath), 
-                          java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(sourceFile.toPath(), Paths.get(outputPath),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 System.out.println("✓ DOCX exported successfully (copied): " + outputPath);
                 return true;
             }
-            
+
             // For PDF/DOC files, create a new DOCX with extracted text
             String content = readFileContent(resume.getFilePath());
-            
+
             // Remove control characters
             content = content.replace("\r", "");
-            
+
             XWPFDocument document = new XWPFDocument();
             FileOutputStream out = new FileOutputStream(outputPath);
 
@@ -169,7 +169,7 @@ public class ExportService {
             document.write(out);
             out.close();
             document.close();
-            
+
             System.out.println("✓ DOCX exported successfully: " + outputPath);
             return true;
 
@@ -183,7 +183,7 @@ public class ExportService {
             return false;
         }
     }
-    
+
     /**
      * Fallback method to export as plain text when DOCX libraries fail
      */
@@ -212,7 +212,7 @@ public class ExportService {
 
         try {
             String content = readFileContent(resume.getFilePath());
-            
+
             StringBuilder html = new StringBuilder();
             html.append("<html><head><style>");
             html.append("body { font-family: Arial, sans-serif; padding: 20px; }");
@@ -236,7 +236,7 @@ public class ExportService {
         if (filePath == null || filePath.isEmpty()) {
             return "";
         }
-        
+
         File file = new File(filePath);
         if (!file.exists()) {
             throw new IOException("File not found: " + filePath);
@@ -264,7 +264,7 @@ public class ExportService {
         int start = 0;
         while (start < text.length()) {
             int end = Math.min(start + width, text.length());
-            
+
             // Try to break at a space if possible
             if (end < text.length()) {
                 int lastSpace = text.lastIndexOf(' ', end);
@@ -272,7 +272,7 @@ public class ExportService {
                     end = lastSpace;
                 }
             }
-            
+
             lines.add(text.substring(start, end).trim());
             start = end + 1;
         }

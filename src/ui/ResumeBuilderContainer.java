@@ -241,7 +241,7 @@ public class ResumeBuilderContainer extends JFrame {
         infoPanel.add(nameLabel);  infoPanel.add(nameValueLabel);
 
         logoutButton = new JButton("Logout");
-        logoutButton.setBackground(Color.RED);
+        logoutButton.setBackground(new Color(0xD40000));
         logoutButton.setForeground(Color.WHITE);
         logoutButton.setOpaque(true);
         logoutButton.setFocusPainted(false);
@@ -249,6 +249,16 @@ public class ResumeBuilderContainer extends JFrame {
         logoutButton.setFont(new Font("Arial", Font.BOLD, 12));
         logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         logoutButton.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to log out?",
+                    "Confirm Logout",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (result != JOptionPane.YES_OPTION) return;
+
             try { utils.Constants.Session.logout(); } catch (Throwable ignored) {}
 
             JOptionPane.showMessageDialog(

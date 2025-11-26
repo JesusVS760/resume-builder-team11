@@ -111,11 +111,14 @@ public class UploadController extends BaseController<UploadPanel> {
                     updateProgress(100, "Done");
                     view.setBusy(false);
 
-                    // Existing summary popup
+                    // Existing summary popup with parsed sections/summary
                     showParsedSummary(lastParsed, file, jobDesc);
 
-                    // Simple confirmation if we actually tailored & saved
+                    // If we actually tailored something, let the view show the two-panel dialog
                     if (tailoredText != null && !tailoredText.isBlank()) {
+                        view.showTailoringResult(tailoredText);
+
+                        // And let the user know what happened with saving
                         if (resumeId > 0) {
                             JOptionPane.showMessageDialog(
                                     view,

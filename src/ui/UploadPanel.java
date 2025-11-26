@@ -1,8 +1,5 @@
 package ui;
 
-import services.ResumeTailoringService;
-import services.ResumeParserService;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
@@ -40,14 +37,7 @@ public class UploadPanel extends JPanel {
 
     private File selectedFile;
 
-    // Services for tailoring
-    private ResumeTailoringService tailoringService;
-    private ResumeParserService parserService;
-
     public UploadPanel() {
-        // Initialize services
-        tailoringService = new ResumeTailoringService();
-        parserService = new ResumeParserService();
 
         setLayout(new BorderLayout());
         setBackground(BG_WHITE);
@@ -226,12 +216,7 @@ public class UploadPanel extends JPanel {
     public void showInfo(String msg, String title)  { JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE); }
 
     private void triggerBuild() {
-        if (onParseListener != null) {
-            onParseListener.actionPerformed(new java.awt.event.ActionEvent(this, 0, "parse"));
-            return;
-        }
-
-        // Default behavior: use tailoring service
+        // Validate inputs on the view side
         if (selectedFile == null) {
             showWarn("Please select or drop a resume file first.", "No file selected");
             return;
@@ -243,52 +228,42 @@ public class UploadPanel extends JPanel {
             return;
         }
 
-        // Process in background thread
-        setBusy(true);
-        setStatus("Processing resume...");
-
-        new SwingWorker<String, Void>() {
-            @Override
-            protected String doInBackground() throws Exception {
-                // Parse resume completely with all sections
-                setStatus("Parsing resume...");
-                ResumeParserService.ParsedResume parsed = parserService.parseResumeComplete(selectedFile);
-
-                // Tailor resume
-                setStatus("Tailoring resume...");
-                String tailored = tailoringService.tailorResume(parsed, jobDesc);
-
-                return tailored;
-            }
-
-            @Override
-            protected void done() {
-                setBusy(false);
-                try {
-                    String result = get();
-
-                    // Parse the result to separate feedback from tailored content
-                    String[] sections = parseResult(result);
-                    String feedback = sections[0];  // Match score, summary, comments
-                    String tailoredResume = sections[1];  // Clean resume text
-
-                    // Create split panel dialog
-                    showSplitResultDialog(feedback, tailoredResume);
-
-                    setStatus("Resume tailored successfully!");
-
-                } catch (Exception ex) {
-                    showError("Failed to tailor resume: " + ex.getMessage(), "Error");
-                    setStatus("Failed to tailor resume");
-                }
-            }
-        }.execute();
-
-        // If onBuild handler is set, also call it
+        // Prefer the controller callback if it was wired
         if (onBuild != null) {
             onBuild.accept(selectedFile, jobDesc);
+            return;
         }
+
+        // Fallback: allow a simple parse listener if someone is using it
+        if (onParseListener != null) {
+            onParseListener.actionPerformed(
+                    new java.awt.event.ActionEvent(this, 0, "parse")
+            );
+            return;
+        }
+
+        // If neither is configured, let the user know
+        showError("No handler is configured to process the resume.", "Not Configured");
     }
+
+    /**
+     * Called by the controller when a tailored resume string is ready.
+     * It reuses the existing parsing/split logic to show the two-panel dialog.
+     */
+    public void showTailoringResult(String result) {
+        if (result == null || result.isBlank()) {
+            showWarn("Tailored resume text is empty.", "No content");
+            return;
+        }
+
+        String[] sections = parseResult(result);
+        String feedback = sections[0];
+        String tailoredResume = sections[1];
+
+        showSplitResultDialog(feedback, tailoredResume);
+        setStatus("Resume tailored successfully!");
+    }
+
 
     /**
      * Parse the result string to separate feedback from tailored resume

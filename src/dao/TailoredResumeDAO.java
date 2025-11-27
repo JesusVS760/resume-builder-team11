@@ -10,11 +10,11 @@ public class TailoredResumeDAO {
 
     public int saveTailoredResume(TailoredResume tr) throws SQLException {
         String sql = """
-            INSERT INTO tailored_resumes
-                (user_id, resume_id, job_title, job_company,
-                 job_description, tailored_text, file_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """;
+        INSERT INTO tailored_resumes
+            (user_id, resume_id, job_title, job_company,
+             job_description, tailored_text, file_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """;
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -24,7 +24,15 @@ public class TailoredResumeDAO {
             ps.setString(3, tr.getJobTitle());
             ps.setString(4, tr.getJobCompany());
             ps.setString(5, tr.getJobDescription());
-            ps.setString(6, tr.getTailoredText());
+
+            // 🔹 IMPORTANT: avoid NULL for NOT NULL column
+            String safeTailored = tr.getTailoredText();
+            if (safeTailored == null) {
+                System.out.println("DEBUG: tailoredText is null in saveTailoredResume for resumeId=" + tr.getResumeId());
+                safeTailored = ""; // or some placeholder
+            }
+            ps.setString(6, safeTailored);
+
             ps.setString(7, tr.getFilePath());
 
             int affected = ps.executeUpdate();

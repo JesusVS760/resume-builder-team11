@@ -113,5 +113,46 @@ public class ResumeDAO {
         return r;
     }
 
+    /**
+     * Updates the file path for a resume (used when saving edited content to a new file)
+     */
+    public boolean updateResumeFilePath(int resumeId, String userId, String newFilePath) throws SQLException {
+        String sql = "UPDATE resumes SET file_path = ? WHERE id = ? AND user_id = ?";
 
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, newFilePath);
+            ps.setInt(2, resumeId);
+            ps.setString(3, userId);
+
+            int affected = ps.executeUpdate();
+            return affected > 0;
+        }
+    }
+
+    /**
+     * Gets a single resume by ID
+     */
+    public Resume getResumeById(int resumeId, String userId) throws SQLException {
+        String sql = """
+            SELECT id, user_id, file_name, file_path, uploaded_at
+            FROM resumes
+            WHERE id = ? AND user_id = ?
+            """;
+
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, resumeId);
+            ps.setString(2, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        }
+        return null;
+    }
 }

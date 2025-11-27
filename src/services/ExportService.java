@@ -135,7 +135,7 @@ public class ExportService {
                 return true;
             }
 
-            // For PDF/DOC files, create a new DOCX with extracted text
+            // For PDF files, create a new DOCX with extracted text
             String content = readFileContent(resume.getFilePath());
 
             // Remove control characters
@@ -144,17 +144,7 @@ public class ExportService {
             XWPFDocument document = new XWPFDocument();
             FileOutputStream out = new FileOutputStream(outputPath);
 
-            // Add title
-            XWPFParagraph titleParagraph = document.createParagraph();
-            XWPFRun titleRun = titleParagraph.createRun();
-            titleRun.setText(resume.getFileName() != null ? resume.getFileName() : "Resume");
-            titleRun.setBold(true);
-            titleRun.setFontSize(16);
-
-            // Add spacing
-            document.createParagraph();
-
-            // Add content
+            // Add content directly (no title)
             if (content != null && !content.isEmpty()) {
                 String[] lines = content.split("\n");
                 for (String line : lines) {

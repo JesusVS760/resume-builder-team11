@@ -21,4 +21,16 @@ public abstract class BaseController<V> {
     public void dispose() {
         if (view instanceof Window w) { w.dispose(); }
     }
+
+    protected String getCurrentUserId() {
+        try {
+            if (utils.Constants.Session.isLoggedIn()) {
+                models.User u = utils.Constants.Session.getCurrentUser();
+                if (u != null) {
+                    return u.getId();
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
 }

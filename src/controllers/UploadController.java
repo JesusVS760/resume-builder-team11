@@ -285,16 +285,4 @@ public class UploadController extends BaseController<UploadPanel> {
         return lastParsed;
     }
 
-    private String getCurrentUserId() {
-        try {
-            if (utils.Constants.Session.isLoggedIn()) {
-                models.User u = utils.Constants.Session.getCurrentUser();
-                if (u != null) {
-                    return u.getId();  // e.g. "U1", "U2", etc.
-                }
-            }
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
 }

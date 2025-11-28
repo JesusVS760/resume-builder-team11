@@ -509,21 +509,6 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
     }
 
     /**
-     * Get current user id from session as a String (e.g. "U5").
-     */
-    private String getCurrentUserId() {
-        try {
-            if (utils.Constants.Session.isLoggedIn()) {
-                models.User u = utils.Constants.Session.getCurrentUser();
-                if (u != null) {
-                    return u.getId();
-                }
-            }
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
-    /**
      * Copies file into an "uploads" folder and inserts a row in `resumes`.
      * Returns the new resume id.
      */

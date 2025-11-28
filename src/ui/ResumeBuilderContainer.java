@@ -1,5 +1,6 @@
 package ui;
 
+import controllers.LandingController;
 import ui.widgets.HoverScaleButton;
 import ui.widgets.AnimatedCards;
 
@@ -189,13 +190,20 @@ public class ResumeBuilderContainer extends JFrame {
     private void plugContent() {
         homePanel.removeAll();
         homePanel.setLayout(new BorderLayout());
-        homePanel.add(new LandingPanel("src/ui/images/landing_hero.png"), BorderLayout.CENTER);
+
+        LandingPanel landing = new LandingPanel("src/ui/images/landing_hero.png");
+
+        new LandingController(landing, () -> buildResumeButton.doClick());
+
+        homePanel.add(landing, BorderLayout.CENTER);
 
         buildResumePanel.removeAll();
         buildResumePanel.setLayout(new BorderLayout());
         uploadPanel = new UploadPanel();
         buildResumePanel.add(uploadPanel, BorderLayout.CENTER);
     }
+
+
 
     private void updateAuthUI() {
         boolean loggedIn = false;

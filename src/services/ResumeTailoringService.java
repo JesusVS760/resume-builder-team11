@@ -1,3 +1,12 @@
+/*
+ * DISCLAIMER:
+ * Portions of this project were supported by the use of Claude Sonnet 4.5.
+ * The tool was used strictly for assistance with formatting, answering
+ * technical questions, and occasional guidance during implementation.
+ * HEAVY USAGE IN FORMATTING AS IT WAS VERY TEDIOUS AND DIFFICULT TO MANAGE FORMATTING
+ * ALL CONTENT WAS THOROUGHLY READ AND LEARNED THROUGH THE PROCESS
+ */
+
 package services;
 
 import java.util.*;
@@ -5,9 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * ResumeTailoringService formats and tailors resumes to a specific job description.
- */
+
 public class ResumeTailoringService {
 
     private static final Set<String> STOPWORDS = Set.of(
@@ -52,7 +59,7 @@ public class ResumeTailoringService {
     }
 
     /**
-     * Generates a complete, professionally formatted tailored resume.
+     * Generates a complete, professionally formatted tailored resume with feedback.
      */
     public String tailorResume(ResumeParserService.ParsedResume parsedResume, String jobDescription) {
         if (parsedResume == null || parsedResume.getFullText() == null) {
@@ -67,7 +74,59 @@ public class ResumeTailoringService {
         List<String> jobKeywords = analyzeJobDescription(jobDescription);
         List<String> matchedKeywords = mapKeywords(originalResume, jobKeywords);
 
-        return formatProfessionalResume(parsedResume, matchedKeywords, jobDescription);
+        // Build output with clear separation markers
+        StringBuilder output = new StringBuilder();
+
+        // Add feedback section with clear markers
+        output.append("===FEEDBACK_START===\n");
+        output.append(buildFeedbackSection(parsedResume, matchedKeywords, jobKeywords, jobDescription));
+        output.append("===FEEDBACK_END===\n\n");
+
+        // Add the tailored resume with clear markers
+        output.append("===RESUME_START===\n");
+        output.append(formatProfessionalResume(parsedResume, matchedKeywords, jobDescription));
+        output.append("===RESUME_END===\n");
+
+        return output.toString();
+    }
+
+    /**
+     * Builds the feedback section showing match analysis and keywords
+     */
+    private String buildFeedbackSection(ResumeParserService.ParsedResume parsedResume,
+                                        List<String> matchedKeywords,
+                                        List<String> allJobKeywords,
+                                        String jobDescription) {
+        StringBuilder feedback = new StringBuilder();
+
+        double matchScore = calculatedMatchScore(parsedResume.getFullText(), jobDescription);
+
+        feedback.append("Job Match Score: ").append(String.format("%.1f%%", matchScore)).append("\n");
+        feedback.append("Keywords Matched: ").append(matchedKeywords.size())
+                .append("/").append(allJobKeywords.size()).append("\n\n");
+
+        // Show matched keywords
+        if (!matchedKeywords.isEmpty()) {
+            feedback.append("MATCHED KEYWORDS (Already in your resume):\n");
+            for (String keyword : matchedKeywords) {
+                feedback.append("  • ").append(capitalize(keyword)).append("\n");
+            }
+            feedback.append("\n");
+        }
+
+        // Show missing keywords
+        List<String> missingKeywords = allJobKeywords.stream()
+                .filter(kw -> !matchedKeywords.contains(kw))
+                .collect(Collectors.toList());
+
+        if (!missingKeywords.isEmpty()) {
+            feedback.append("KEYWORDS TO CONSIDER ADDING:\n");
+            for (String keyword : missingKeywords) {
+                feedback.append("  • ").append(capitalize(keyword)).append("\n");
+            }
+        }
+
+        return feedback.toString();
     }
 
     /**
@@ -190,16 +249,14 @@ public class ResumeTailoringService {
         if (!matchedKeywords.isEmpty() && jobDescription != null && !jobDescription.trim().isEmpty()) {
             double matchScore = calculatedMatchScore(parsedResume.getFullText(), jobDescription);
             List<String> allJobKeywords = analyzeJobDescription(jobDescription);
-            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d/%d | ★ indicates strong alignment\n",
+            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d/%d\n",
                     matchScore, matchedKeywords.size(), allJobKeywords.size()));
-        } else {
-            resume.append("★ indicates strong alignment with requirements\n");
         }
 
         return resume.toString();
     }
 
-    // ---------------- Helper Methods ----------------
+    // Helper Methods
 
     private String extractHeader(String resumeText) {
         String[] lines = resumeText.split("\n");
@@ -210,8 +267,12 @@ public class ResumeTailoringService {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
             if (isSectionHeader(line)) break;
-            if (headerLines == 0 && line.length() > 3) header.append(centerText(line.toUpperCase(), 80)).append("\n");
-            else header.append(centerText(line, 80)).append("\n");
+            // Left-align all header lines (no centering)
+            if (headerLines == 0 && line.length() > 3) {
+                header.append(line.toUpperCase()).append("\n");
+            } else {
+                header.append(line).append("\n");
+            }
             headerLines++;
         }
 
@@ -223,9 +284,6 @@ public class ResumeTailoringService {
         return wrapText(cleaned, 80);
     }
 
-    /**
-     * FIXED: Properly formats skills - extracts clean skills and formats in readable columns
-     */
     private String formatSkillsSection(String skills, List<String> matchedKeywords) {
         List<String> skillList = extractSkills(skills);
 
@@ -235,40 +293,22 @@ public class ResumeTailoringService {
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
 
-        List<String> matched = new ArrayList<>();
-        List<String> unmatched = new ArrayList<>();
-
-        for (String skill : skillList) {
-            boolean isMatched = matchedKeywords.stream()
-                    .anyMatch(kw -> skill.toLowerCase().contains(kw.toLowerCase()));
-            if (isMatched) {
-                matched.add("★ " + skill);
-            } else {
-                unmatched.add("• " + skill);
-            }
-        }
-
-        // Combine matched skills first, then unmatched
-        List<String> allSkills = new ArrayList<>();
-        allSkills.addAll(matched);
-        allSkills.addAll(unmatched);
-
         StringBuilder formatted = new StringBuilder();
 
-        // Format in 2 columns for better readability
-        for (int i = 0; i < allSkills.size(); i += 2) {
-            String skill1 = allSkills.get(i);
-            formatted.append(skill1);
+        // Format in 2 columns for better readability - all with regular bullets
+        for (int i = 0; i < skillList.size(); i += 2) {
+            String skill1 = skillList.get(i);
+            formatted.append("• ").append(skill1);
 
             // Add proper spacing to reach column 2
-            int padding = 38 - skill1.length();
+            int padding = 38 - ("• " + skill1).length();
             if (padding > 0) {
                 formatted.append(" ".repeat(padding));
             }
 
-            if (i + 1 < allSkills.size()) {
-                String skill2 = allSkills.get(i + 1);
-                formatted.append(skill2);
+            if (i + 1 < skillList.size()) {
+                String skill2 = skillList.get(i + 1);
+                formatted.append("• ").append(skill2);
             }
             formatted.append("\n");
         }
@@ -277,7 +317,8 @@ public class ResumeTailoringService {
     }
 
     /**
-     * FIXED: Better skill extraction - handles categories, semicolons, commas, bullets and merges fragments
+     * Better skill extraction - handles categories, semicolons, commas, bullets and merges fragments
+     * DISCLAIMER CODE GENERATED WITH CALUDE SONNET 4.5
      */
     private List<String> extractSkills(String skillsText) {
         // First normalize: replace newlines and multiple spaces with single space
@@ -325,7 +366,7 @@ public class ResumeTailoringService {
     }
 
     /**
-     * FIXED: Properly identifies and separates distinct project/job experiences
+     * Properly identifies and separates distinct project/job experiences
      */
     private String formatExperienceSection(String experience, List<String> matchedKeywords) {
         StringBuilder formatted = new StringBuilder();
@@ -347,7 +388,7 @@ public class ResumeTailoringService {
     }
 
     /**
-     * FIXED: Splits experience text into distinct projects by identifying project titles
+     * Splits experience text into distinct projects by identifying project titles
      */
     private List<String> splitIntoProjects(String experience) {
         List<String> projects = new ArrayList<>();
@@ -380,7 +421,7 @@ public class ResumeTailoringService {
     }
 
     /**
-     * FIXED: Formats a single project with title and bullet points clearly separated
+     * UPDATED: Formats a single project with clean bullets (•) only - no stars
      */
     private String formatSingleProject(String projectText, List<String> matchedKeywords) {
         StringBuilder formatted = new StringBuilder();
@@ -441,15 +482,10 @@ public class ResumeTailoringService {
             }
         }
 
-        // Format bullets with matched keyword highlighting
+        // Format all bullets with regular bullets (•) - no stars
         for (String bullet : bullets) {
             if (bullet.isEmpty()) continue;
-
-            boolean isMatched = matchedKeywords.stream()
-                    .anyMatch(kw -> bullet.toLowerCase().contains(kw.toLowerCase()));
-
-            String prefix = isMatched ? "★ " : "• ";
-            formatted.append(wrapBullet(prefix + bullet, 80, 2)).append("\n");
+            formatted.append(wrapBullet("• " + bullet, 80, 2)).append("\n");
         }
 
         return formatted.toString();

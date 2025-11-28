@@ -112,7 +112,7 @@ public class UploadController extends BaseController<UploadPanel> {
                     view.setBusy(false);
 
                     // Existing summary popup with parsed sections/summary
-                    showParsedSummary(lastParsed, file, jobDesc);
+//                    showParsedSummary(lastParsed, file, jobDesc);
 
                     // If we actually tailored something, let the view show the two-panel dialog
                     if (tailoredText != null && !tailoredText.isBlank()) {

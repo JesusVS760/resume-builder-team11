@@ -1,3 +1,11 @@
+/*
+ * DISCLAIMER:
+ * Portions of this project were supported by the use of Claude Sonnet 4.5.
+ * The tool was used strictly for assistance with formatting, answering
+ * technical questions, and occasional guidance during implementation.
+ * ALL CONTENT WAS THOROUGHLY READ AND LEARNED THROUGH THE PROCESS
+ */
+
 package services;
 
 import java.io.File;

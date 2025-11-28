@@ -33,7 +33,7 @@ public class UploadPanel extends JPanel {
 
     private Consumer<File> onFileDropped;
     private BiConsumer<File, String> onBuild;
-    private java.awt.event.ActionListener onParseListener;
+//    private java.awt.event.ActionListener onParseListener;
 
     private File selectedFile;
 
@@ -180,7 +180,7 @@ public class UploadPanel extends JPanel {
 
     public void setOnFileDropped(Consumer<File> c) { this.onFileDropped = c; }
     public void setOnBuild(BiConsumer<File, String> c) { this.onBuild = c; }
-    public void setOnParse(java.awt.event.ActionListener l) { this.onParseListener = l; }
+//    public void setOnParse(java.awt.event.ActionListener l) { this.onParseListener = l; }
 
     public File getSelectedFile() { return selectedFile; }
     public void setSelectedFile(File f) {
@@ -235,12 +235,13 @@ public class UploadPanel extends JPanel {
         }
 
         // Fallback: allow a simple parse listener if someone is using it
-        if (onParseListener != null) {
-            onParseListener.actionPerformed(
-                    new java.awt.event.ActionEvent(this, 0, "parse")
-            );
-            return;
-        }
+//        if (onParseListener != null) {
+//            onParseListener.actionPerformed(
+//                    new java.awt.event.ActionEvent(this, 0, "parse")
+//            );
+//            return;
+//
+//        }
 
         // If neither is configured, let the user know
         showError("No handler is configured to process the resume.", "Not Configured");
@@ -267,68 +268,101 @@ public class UploadPanel extends JPanel {
 
     /**
      * Parse the result string to separate feedback from tailored resume
+     * Uses markers: ===FEEDBACK_START=== and ===RESUME_START===
      */
     private String[] parseResult(String result) {
         StringBuilder feedback = new StringBuilder();
         StringBuilder tailoredResume = new StringBuilder();
 
-        String[] lines = result.split("\n");
-        boolean inResumeSection = false;
-        boolean foundFirstResumeHeader = false;
+        // Check if result uses the marker format
+        if (result.contains("===FEEDBACK_START===") && result.contains("===RESUME_START===")) {
+            // New format with explicit markers
+            int feedbackStart = result.indexOf("===FEEDBACK_START===");
+            int feedbackEnd = result.indexOf("===FEEDBACK_END===");
+            int resumeStart = result.indexOf("===RESUME_START===");
+            int resumeEnd = result.indexOf("===RESUME_END===");
 
-        for (String line : lines) {
-            String trimmed = line.trim();
-
-            // Skip empty lines at the beginning
-            if (!foundFirstResumeHeader && trimmed.isEmpty()) {
-                continue;
+            if (feedbackStart >= 0 && feedbackEnd > feedbackStart) {
+                String feedbackSection = result.substring(
+                        feedbackStart + "===FEEDBACK_START===".length(),
+                        feedbackEnd
+                ).trim();
+                feedback.append(feedbackSection);
             }
 
-            // Feedback indicators - always goes to left panel
-            if (trimmed.startsWith("Job Match Score:") ||
-                    trimmed.startsWith("Keywords Matched:") ||
-                    trimmed.contains("indicates strong alignment") ||
-                    trimmed.startsWith("Summary:") ||
-                    trimmed.startsWith("Comments:")) {
-                feedback.append(line).append("\n");
-                inResumeSection = false;
-                continue;
-            }
-
-            // Detect first resume header (person's name or all-caps section)
-            // This marks the start of actual resume content
-            if (!foundFirstResumeHeader) {
-                // Look for name line (mixed case, reasonable length) or section headers (all caps)
-                if ((trimmed.length() > 2 && trimmed.length() < 50 &&
-                        !trimmed.contains(":") && !trimmed.contains("★")) ||
-                        (trimmed.matches("^[A-Z\\s]{3,}$") && trimmed.length() > 2)) {
-                    foundFirstResumeHeader = true;
-                    inResumeSection = true;
+            if (resumeStart >= 0) {
+                String resumeSection;
+                if (resumeEnd > resumeStart) {
+                    resumeSection = result.substring(
+                            resumeStart + "===RESUME_START===".length(),
+                            resumeEnd
+                    ).trim();
+                } else {
+                    resumeSection = result.substring(
+                            resumeStart + "===RESUME_START===".length()
+                    ).trim();
                 }
+                tailoredResume.append(resumeSection);
             }
+        } else {
+            // Fallback to old parsing logic
+            String[] lines = result.split("\n");
+            boolean inResumeSection = false;
+            boolean foundFirstResumeHeader = false;
 
-            // Once in resume section, process each line
-            if (foundFirstResumeHeader) {
-                // Remove ★ symbols from resume content
-                String cleanLine = line.replace("★", "").trim();
+            for (String line : lines) {
+                String trimmed = line.trim();
 
-                // Skip lines that are purely commentary
-                if (cleanLine.toLowerCase().startsWith("comment:") ||
-                        cleanLine.toLowerCase().startsWith("note:") ||
-                        cleanLine.toLowerCase().startsWith("suggestion:")) {
-                    feedback.append(line).append("\n");
+                // Skip empty lines at the beginning
+                if (!foundFirstResumeHeader && trimmed.isEmpty()) {
                     continue;
                 }
 
-                // Add to resume, preserving formatting
-                if (cleanLine.isEmpty()) {
-                    tailoredResume.append("\n");
-                } else {
-                    tailoredResume.append(cleanLine).append("\n");
+                // Feedback indicators - always goes to left panel
+                if (trimmed.startsWith("Job Match Score:") ||
+                        trimmed.startsWith("Keywords Matched:") ||
+                        trimmed.startsWith("★ MATCHED KEYWORDS") ||
+                        trimmed.startsWith("• KEYWORDS TO CONSIDER") ||
+                        trimmed.contains("indicates strong alignment") ||
+                        trimmed.startsWith("Summary:") ||
+                        trimmed.startsWith("Comments:")) {
+                    feedback.append(line).append("\n");
+                    inResumeSection = false;
+                    continue;
                 }
-            } else {
-                // Before resume starts, everything is feedback
-                feedback.append(line).append("\n");
+
+                // Detect first resume header (person's name or all-caps section)
+                if (!foundFirstResumeHeader) {
+                    if ((trimmed.length() > 2 && trimmed.length() < 50 &&
+                            !trimmed.contains(":") && !trimmed.contains("★")) ||
+                            (trimmed.matches("^[A-Z\\s]{3,}$") && trimmed.length() > 2)) {
+                        foundFirstResumeHeader = true;
+                        inResumeSection = true;
+                    }
+                }
+
+                // Once in resume section, process each line
+                if (foundFirstResumeHeader) {
+                    String cleanLine = line.trim();
+
+                    // Skip lines that are purely commentary
+                    if (cleanLine.toLowerCase().startsWith("comment:") ||
+                            cleanLine.toLowerCase().startsWith("note:") ||
+                            cleanLine.toLowerCase().startsWith("suggestion:")) {
+                        feedback.append(line).append("\n");
+                        continue;
+                    }
+
+                    // Add to resume, preserving formatting
+                    if (cleanLine.isEmpty()) {
+                        tailoredResume.append("\n");
+                    } else {
+                        tailoredResume.append(line).append("\n");
+                    }
+                } else {
+                    // Before resume starts, everything is feedback
+                    feedback.append(line).append("\n");
+                }
             }
         }
 
@@ -426,7 +460,7 @@ public class UploadPanel extends JPanel {
         titleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        // Resume text area
+        // Resume text area - standard font throughout
         JTextArea resumeArea = new JTextArea(tailoredResume);
         resumeArea.setEditable(false);
         resumeArea.setLineWrap(true);

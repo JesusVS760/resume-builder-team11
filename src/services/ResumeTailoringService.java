@@ -250,14 +250,6 @@ public class ResumeTailoringService {
         }
 
         // FOOTER
-        resume.append("\n").append(repeatChar('═', 80)).append("\n");
-        if (!matchedKeywords.isEmpty() && jobDescription != null && !jobDescription.trim().isEmpty()) {
-            double matchScore = calculatedMatchScore(parsedResume.getFullText(), jobDescription);
-            List<String> allJobKeywords = analyzeJobDescription(jobDescription);
-            resume.append(String.format("Job Match Score: %.1f%% | Keywords Matched: %d/%d\n",
-                    matchScore, matchedKeywords.size(), allJobKeywords.size()));
-        }
-
         return resume.toString();
     }
 

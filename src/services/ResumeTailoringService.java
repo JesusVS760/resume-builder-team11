@@ -33,7 +33,12 @@ public class ResumeTailoringService {
             "professional", "skills", "summary", "career", "profile", "responsible",
             "company", "organization", "management", "employee",
             "task", "tasks", "service", "services", "software", "application",
-            "technology", "technologies", "system", "systems" , "maintain" , "junior", "front"
+            "technology", "technologies", "system", "systems" , "maintain" , "junior",
+            "front", "top", "topskill", "growth", "must", "000", "staff", "choices",
+            "advocate", "specified", "validation", "manual", "supplied", "acceptance",
+            "strong", "tooling", "culture", "data", "tools", "using", "logs", "creating"
+            ,"office", "150k", "their", "help", "full", "coding", "familiarity", "etc",
+            "party", "years"
     );
 
 

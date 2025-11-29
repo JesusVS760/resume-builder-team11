@@ -38,7 +38,6 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
                 savedResumesController.refresh();
             }
         });
-        view.setOnNavSettings(e -> view.showSettings());
         view.setOnNavProfile(e -> {
             if (isLoggedIn()) {
                 openProfile();
@@ -102,12 +101,9 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
                 new LoginFrame(),
                 authService,
                 () -> {
+                    // on successful login:
                     view.updateAuthUIPublic();
-                    view.showProfile();
-                    try {
-                        var u = utils.Constants.Session.getCurrentUser();
-                        view.updateProfileView(u);
-                    } catch (Throwable ignored) {}
+                    openProfile();
                 },
                 this::openSignup
         );
@@ -125,10 +121,13 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
     }
 
     public void openProfile() {
+        // Show the PROFILE card inside ResumeBuilderContainer
         view.showProfile();
+
+        // Make sure the email/name on the profile card are up to date
         try {
             var u = utils.Constants.Session.getCurrentUser();
             view.updateProfileView(u);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) { }
     }
 }

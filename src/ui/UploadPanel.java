@@ -183,6 +183,7 @@ public class UploadPanel extends JPanel {
 //    public void setOnParse(java.awt.event.ActionListener l) { this.onParseListener = l; }
 
     public File getSelectedFile() { return selectedFile; }
+
     public void setSelectedFile(File f) {
         this.selectedFile = f;
         fileLabel.setText(f == null ? "No file selected" : f.getName());
@@ -578,18 +579,32 @@ public class UploadPanel extends JPanel {
 
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+            // Background
             g.setColor(new Color(0xe6e6e6));
             g.fillRect(0, 0, w, h);
 
-            // Simple solid border (no rounded corners, no dash)
+            // Simple solid border
             g.setColor(hover ? ACCENT : BORDER_NEUTRAL);
             g.setStroke(new BasicStroke(2f));
             g.drawRect(1, 1, w - 2, h - 2);
 
-            // Text lines
-            String t1 = "Drag & Drop your resume";
-            String t2 = "(in PDF, DOC, or DOCX format)";
-            String t3 = "or click to choose file";
+            // Decide text based on whether a file is selected
+            java.io.File f = UploadPanel.this.selectedFile;
+
+            String t1;
+            String t2;
+            String t3;
+
+            if (f != null) {
+                String fname = f.getName();
+                t1 = "You have uploaded \"" + fname + "\"";
+                t2 = "Click to change file";
+                t3 = "Or drag & drop a different resume";
+            } else {
+                t1 = "Drag & Drop your resume";
+                t2 = "(in PDF, DOC, or DOCX format)";
+                t3 = "or click to choose file";
+            }
 
             Font f1 = new Font("Segoe UI", Font.BOLD, 16);   // main line
             Font f2 = new Font("Segoe UI", Font.PLAIN, 13);  // format line
@@ -619,6 +634,7 @@ public class UploadPanel extends JPanel {
 
             g.dispose();
         }
+
 
         private void drawCentered(Graphics2D g, String s, int width, int y) {
             FontMetrics fm = g.getFontMetrics();

@@ -1,6 +1,6 @@
 package dao;
 
-import models.TailoredResume;
+import models.AnalyzedResume;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -8,7 +8,7 @@ import java.util.List;
 
 public class TailoredResumeDAO {
 
-    public int saveTailoredResume(TailoredResume tr) throws SQLException {
+    public int saveTailoredResume(AnalyzedResume tr) throws SQLException {
         String sql = """
         INSERT INTO tailored_resumes
             (user_id, resume_id, job_title, job_company,
@@ -52,7 +52,7 @@ public class TailoredResumeDAO {
         }
     }
 
-    public List<TailoredResume> getTailoredByUser(int userId) throws SQLException {
+    public List<AnalyzedResume> getTailoredByUser(int userId) throws SQLException {
         String sql = """
             SELECT id, user_id, resume_id, job_title, job_company,
                    job_description, tailored_text, file_path, created_at
@@ -61,7 +61,7 @@ public class TailoredResumeDAO {
             ORDER BY created_at DESC
         """;
 
-        List<TailoredResume> list = new ArrayList<>();
+        List<AnalyzedResume> list = new ArrayList<>();
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -78,7 +78,7 @@ public class TailoredResumeDAO {
         return list;
     }
 
-    public List<TailoredResume> getTailoredByUserAndResume(int userId, int resumeId) throws SQLException {
+    public List<AnalyzedResume> getTailoredByUserAndResume(int userId, int resumeId) throws SQLException {
         String sql = """
             SELECT id, user_id, resume_id, job_title, job_company,
                    job_description, tailored_text, file_path, created_at
@@ -87,7 +87,7 @@ public class TailoredResumeDAO {
             ORDER BY created_at DESC
         """;
 
-        List<TailoredResume> list = new ArrayList<>();
+        List<AnalyzedResume> list = new ArrayList<>();
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -118,8 +118,8 @@ public class TailoredResumeDAO {
         }
     }
 
-    private TailoredResume mapRow(ResultSet rs) throws SQLException {
-        TailoredResume tr = new TailoredResume();
+    private AnalyzedResume mapRow(ResultSet rs) throws SQLException {
+        AnalyzedResume tr = new AnalyzedResume();
         tr.setId(rs.getInt("id"));
         tr.setUserId(rs.getInt("user_id"));
         tr.setResumeId(rs.getInt("resume_id"));

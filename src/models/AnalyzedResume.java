@@ -1,6 +1,6 @@
 package models;
 
-public class TailoredResume {
+public class AnalyzedResume {
     private int id;
     private int userId;
     private int resumeId;          // FK to resumes.id
@@ -11,10 +11,10 @@ public class TailoredResume {
     private String filePath;       // path to exported PDF/DOCX
     private String createdAt;      // TEXT from DB
 
-    public TailoredResume() {}
+    public AnalyzedResume() {}
 
     // Constructor for loading from DB
-    public TailoredResume(int id, int userId, int resumeId, String jobTitle,
+    public AnalyzedResume(int id, int userId, int resumeId, String jobTitle,
                           String jobCompany, String jobDescription,
                           String tailoredText, String filePath, String createdAt) {
         this.id = id;
@@ -29,7 +29,7 @@ public class TailoredResume {
     }
 
     // Constructor for inserting a new tailored resume
-    public TailoredResume(int userId, int resumeId, String jobTitle,
+    public AnalyzedResume(int userId, int resumeId, String jobTitle,
                           String jobCompany, String jobDescription,
                           String tailoredText, String filePath) {
         this.userId = userId;
@@ -41,7 +41,7 @@ public class TailoredResume {
         this.filePath = filePath;
     }
 
-    public TailoredResume(int resumeId, Object o, Object o1, String jobDesc, String tailoredText, Object o2) {
+    public AnalyzedResume(int resumeId, Object o, Object o1, String jobDesc, String tailoredText, Object o2) {
     }
 
     // Getters / setters

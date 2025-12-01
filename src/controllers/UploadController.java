@@ -3,12 +3,12 @@ package controllers;
 import ui.UploadPanel;
 import services.ResumeParserService;
 import services.ResumeParserService.ParsedResume;
-import services.ResumeTailoringService;
+import services.ResumeAnalyzeService;
 
 import dao.ResumeDAO;
 import dao.TailoredResumeDAO;
 import models.Resume;
-import models.TailoredResume;
+import models.AnalyzedResume;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,7 +22,7 @@ import java.util.Map;
 
 public class UploadController extends BaseController<UploadPanel> {
     private final ResumeParserService parser;
-    private final ResumeTailoringService tailoringService;
+    private final ResumeAnalyzeService tailoringService;
     private final ResumeDAO resumeDAO;
     private final TailoredResumeDAO tailoredResumeDAO;
 
@@ -30,7 +30,7 @@ public class UploadController extends BaseController<UploadPanel> {
 
     public UploadController(UploadPanel view,
                             ResumeParserService parser,
-                            ResumeTailoringService tailoringService,
+                            ResumeAnalyzeService tailoringService,
                             ResumeDAO resumeDAO,
                             TailoredResumeDAO tailoredResumeDAO) {
         super(view);
@@ -88,7 +88,7 @@ public class UploadController extends BaseController<UploadPanel> {
 
                     // Only persist if we successfully saved the original resume
                     if (resumeId > 0) {
-                        TailoredResume tr = new TailoredResume(
+                        AnalyzedResume tr = new AnalyzedResume(
                                 resumeId,
                                 null,          // jobTitle (optional for now)
                                 null,          // jobCompany

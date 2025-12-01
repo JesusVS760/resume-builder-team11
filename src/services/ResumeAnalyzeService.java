@@ -14,7 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class ResumeTailoringService {
+public class ResumeAnalyzeService {
 
     private static final Set<String> STOPWORDS = Set.of(
             "and", "or", "with", "the", "a", "an", "to", "of", "in", "for",

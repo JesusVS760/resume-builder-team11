@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ResumeBuilderContainer extends JFrame {
+public class ResumeAnalyzingContainer extends JFrame {
 
     // Card Keys
     private static final String CARD_HOME     = "HOME";
@@ -54,7 +54,7 @@ public class ResumeBuilderContainer extends JFrame {
     // Reference to inner UploadPanel for controllers
     private UploadPanel uploadPanel;
 
-    public ResumeBuilderContainer() {
+    public ResumeAnalyzingContainer() {
         super("Resume Builder");
 
         initLookAndFeel();
@@ -292,7 +292,7 @@ public class ResumeBuilderContainer extends JFrame {
 
     private ImageIcon loadScaledIcon(String classpath, String fileFallback, int w, int h) {
         try {
-            java.net.URL url = ResumeBuilderContainer.class.getResource(classpath);
+            java.net.URL url = ResumeAnalyzingContainer.class.getResource(classpath);
             if (url == null) {
                 java.io.File f = new java.io.File(fileFallback);
                 if (f.exists()) url = f.toURI().toURL();

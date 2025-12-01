@@ -3,20 +3,20 @@ package controllers;
 import services.AuthService;
 import services.TwilioService;
 import services.ResumeParserService;
-import services.ResumeTailoringService;
+import services.ResumeAnalyzeService;
 import dao.ResumeDAO;
 import dao.TailoredResumeDAO;
 
 import ui.*;
 
-public class AppController extends BaseController<ResumeBuilderContainer> {
+public class AppController extends BaseController<ResumeAnalyzingContainer> {
     private final AuthService authService;
     private final TwilioService twilioService;
 
     private UploadController uploadController;
     private SavedResumesController savedResumesController;
 
-    public AppController(ResumeBuilderContainer container,
+    public AppController(ResumeAnalyzingContainer container,
                          AuthService authService,
                          TwilioService twilioService) {
         super(container);
@@ -53,7 +53,7 @@ public class AppController extends BaseController<ResumeBuilderContainer> {
         if (up != null && uploadController == null) {
             // Services
             ResumeParserService parser = new ResumeParserService();
-            ResumeTailoringService tailoringService = new ResumeTailoringService();
+            ResumeAnalyzeService tailoringService = new ResumeAnalyzeService();
 
             // DAOs
             ResumeDAO resumeDAO = new ResumeDAO();

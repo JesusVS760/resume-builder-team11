@@ -40,7 +40,7 @@ public class LandingPanel extends JPanel {
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
         top.setBorder(new EmptyBorder(24, 24, 8, 24));
 
-        JLabel title = new JLabel("Tailored Resume Builder", SwingConstants.CENTER);
+        JLabel title = new JLabel("Resume Analyzer", SwingConstants.CENTER);
         title.setFont(title.getFont().deriveFont(Font.BOLD, 30f));
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -80,9 +80,9 @@ public class LandingPanel extends JPanel {
                 "<html><body style='width:620px'>" +
                         "1. <b>Upload</b> your existing resume (PDF, DOC, or DOCX).<br/>" +
                         "2. <b>Paste the job description</b> for the role you want to apply to.<br/>" +
-                        "3. The app <b>parses your resume</b> and <b>generates a tailored version</b> " +
+                        "3. The app <b>parses your resume</b> and <b>generates a analyzed version</b> " +
                         "that highlights the most relevant skills and keywords for that job.<br/><br/>" +
-                        "You can then review, save, and export tailored resumes as PDF or DOCX " +
+                        "You can then review, save, and export analyzed resumes as PDF or DOCX " +
                         "for different positions and companies." +
                         "</body></html>"
         );

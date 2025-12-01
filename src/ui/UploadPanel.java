@@ -130,7 +130,7 @@ public class UploadPanel extends JPanel {
         fileLabel.setForeground(TEXT_MUTED);
         fileLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        buildButton = new JButton("Build Tailored Resume");
+        buildButton = new JButton("Analyze Resume");
         buildButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         buildButton.addActionListener(e -> triggerBuild());
         stylePrimaryButton(buildButton);

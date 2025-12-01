@@ -5,7 +5,7 @@ import services.TwilioService;
 import services.ResumeParserService;
 import services.ResumeAnalyzeService;
 import dao.ResumeDAO;
-import dao.TailoredResumeDAO;
+import dao.AnalyzedResumeDAO;
 
 import ui.*;
 
@@ -57,7 +57,7 @@ public class AppController extends BaseController<ResumeAnalyzingContainer> {
 
             // DAOs
             ResumeDAO resumeDAO = new ResumeDAO();
-            TailoredResumeDAO tailoredResumeDAO = new TailoredResumeDAO();
+            AnalyzedResumeDAO tailoredResumeDAO = new AnalyzedResumeDAO();
 
             uploadController = new UploadController(
                     up,

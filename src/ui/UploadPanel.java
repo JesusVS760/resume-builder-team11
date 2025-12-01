@@ -254,7 +254,7 @@ public class UploadPanel extends JPanel {
      */
     public void showTailoringResult(String result) {
         if (result == null || result.isBlank()) {
-            showWarn("Tailored resume text is empty.", "No content");
+            showWarn("Analyzed resume text is empty.", "No content");
             return;
         }
 
@@ -263,7 +263,7 @@ public class UploadPanel extends JPanel {
         String tailoredResume = sections[1];
 
         showSplitResultDialog(feedback, tailoredResume);
-        setStatus("Resume tailored successfully!");
+        setStatus("Resume Analysis successfully!");
     }
 
 
@@ -375,7 +375,7 @@ public class UploadPanel extends JPanel {
      */
     private void showSplitResultDialog(String feedback, String tailoredResume) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
-                "Tailored Resume Result", true);
+                "Analyzed Resume Result", true);
         dialog.setLayout(new BorderLayout());
 
         // Create split pane
@@ -455,7 +455,7 @@ public class UploadPanel extends JPanel {
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         // Title
-        JLabel titleLabel = new JLabel("Tailored Resume");
+        JLabel titleLabel = new JLabel("Formatted Resume");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(TEXT_PRIMARY);
         titleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));

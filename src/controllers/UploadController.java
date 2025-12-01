@@ -6,7 +6,7 @@ import services.ResumeParserService.ParsedResume;
 import services.ResumeAnalyzeService;
 
 import dao.ResumeDAO;
-import dao.TailoredResumeDAO;
+import dao.AnalyzedResumeDAO;
 import models.Resume;
 import models.AnalyzedResume;
 
@@ -24,7 +24,7 @@ public class UploadController extends BaseController<UploadPanel> {
     private final ResumeParserService parser;
     private final ResumeAnalyzeService tailoringService;
     private final ResumeDAO resumeDAO;
-    private final TailoredResumeDAO tailoredResumeDAO;
+    private final AnalyzedResumeDAO tailoredResumeDAO;
 
     private ParsedResume lastParsed;
 
@@ -32,7 +32,7 @@ public class UploadController extends BaseController<UploadPanel> {
                             ResumeParserService parser,
                             ResumeAnalyzeService tailoringService,
                             ResumeDAO resumeDAO,
-                            TailoredResumeDAO tailoredResumeDAO) {
+                            AnalyzedResumeDAO tailoredResumeDAO) {
         super(view);
         this.parser = parser;
         this.tailoringService = tailoringService;
@@ -82,7 +82,7 @@ public class UploadController extends BaseController<UploadPanel> {
 
                 // 2) Generate + save tailored resume if we have a job description
                 if (jobDesc != null && !jobDesc.isBlank()) {
-                    updateProgress(75, "Tailoring resume to job…");
+                    updateProgress(75, "Analysis of resume to job…");
 
                     tailoredText = tailoringService.tailorResume(parsed, jobDesc);
 
@@ -122,16 +122,16 @@ public class UploadController extends BaseController<UploadPanel> {
                         if (resumeId > 0) {
                             JOptionPane.showMessageDialog(
                                     view,
-                                    "A tailored resume was generated and saved for this job description.",
-                                    "Tailored Resume Saved",
+                                    "A resume analysis was generated and saved for this job description.",
+                                    "Resume Analysis Saved",
                                     JOptionPane.INFORMATION_MESSAGE
                             );
                         } else {
                             JOptionPane.showMessageDialog(
                                     view,
-                                    "A tailored resume was generated, but you are not logged in,\n" +
+                                    "A resume analysis was generated, but you are not logged in,\n" +
                                             "so it was not saved to your account.",
-                                    "Tailored Resume Generated",
+                                    "Analysis Generated",
                                     JOptionPane.INFORMATION_MESSAGE
                             );
                         }

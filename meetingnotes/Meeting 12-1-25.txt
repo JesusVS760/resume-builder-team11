@@ -1,0 +1,3 @@
+-Need to edit some naming conventions in our code
+-Need to also change some names in our diagrams
+-Need to test and plan for presentation

@@ -47,11 +47,11 @@ chmod +x run.sh (only have to run this once)
    - `sqlite3 --version`
    - If you see a version number, SQLite is installed correctly.
 
-### macOS
+### Mac
 1. Open **Terminal**.
 2. If you have **Homebrew** installed, run:
    - `brew install sqlite`
-3. If you do **not** have Homebrew, you can install it by running (from `https://brew.sh`):
+3. If you do **not** have Homebrew, you can install it by running:
    - `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
    - Then run `brew install sqlite`.
 4. Verify the installation by running in Terminal:
@@ -60,35 +60,35 @@ chmod +x run.sh (only have to run this once)
 
 ## Database Access
 
-**Open database, make sure you are in project root**
+**Open database, in project root**
 
 
-sqlite3 database/database.db
+- sqlite3 database/database.db
 
 
 **View tables**
 
 
-.tables
+- .tables
 
 
 **View data of users who sign up normally**
 
 
-SELECT * FROM users;
+- SELECT * FROM users;
 
 
 **View data of users who signed up using oAuth**
 
-SELECT * FROM oauth_users;
+- SELECT * FROM oauth_users;
 
 **View saved resumes**
 
-SELECT * FROM resumes;
+- SELECT * FROM resumes;
 
 
 **Exit SQLite**
 
-.quit
+- .quit
 
 

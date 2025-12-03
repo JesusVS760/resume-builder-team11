@@ -9,7 +9,6 @@ import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
@@ -369,7 +368,6 @@ import com.sun.net.httpserver.HttpExchange;
         JsonNode userInfo = getGoogleUserInfo(accessToken);
 
         // Extract user details
-        String googleId = userInfo.get("id").asText();
         String email = userInfo.get("email").asText();
         String name = userInfo.get("name").asText();
 
@@ -385,11 +383,7 @@ import com.sun.net.httpserver.HttpExchange;
         String accessToken = exchangeGitHubCodeForToken(authCode, port);
 
         // Get user info from GitHub
-        JsonNode userInfo = getGitHubUserInfo(accessToken);
         String email = getGitHubUserEmail(accessToken);
-
-        // Extract user details
-        String githubId = userInfo.get("id").asText();
 
         // Use email prefix as name (same as regular signup)
         String name = email.split("@")[0];
@@ -470,20 +464,6 @@ import com.sun.net.httpserver.HttpExchange;
     }
 
     /**
-     * Gets user info from GitHub API
-     */
-    private JsonNode getGitHubUserInfo(String accessToken) throws Exception {
-        HttpGet get = new HttpGet("https://api.github.com/user");
-        get.setHeader("Authorization", "Bearer " + accessToken);
-        get.setHeader("Accept", "application/vnd.github.v3+json");
-
-        try (CloseableHttpResponse response = httpClient.execute(get)) {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            return objectMapper.readTree(responseBody);
-        }
-    }
-
-    /**
      * Gets user email from GitHub API
      */
     private String getGitHubUserEmail(String accessToken) throws Exception {
@@ -522,7 +502,6 @@ import com.sun.net.httpserver.HttpExchange;
         JsonNode userInfo = getGoogleUserInfo(accessToken);
 
         // Extract user details
-        String googleId = userInfo.get("id").asText();
         String email = userInfo.get("email").asText();
         String name = userInfo.get("name").asText();
 
@@ -538,11 +517,7 @@ import com.sun.net.httpserver.HttpExchange;
         String accessToken = exchangeGitHubCodeForToken(authCode, port);
 
         // Get user info from GitHub
-        JsonNode userInfo = getGitHubUserInfo(accessToken);
         String email = getGitHubUserEmail(accessToken);
-
-        // Extract user details
-        String githubId = userInfo.get("id").asText();
 
         // Use email prefix as name (same as regular signup)
         String name = email.split("@")[0];
@@ -584,11 +559,10 @@ import com.sun.net.httpserver.HttpExchange;
     private static class OAuthCallbackServer {
         private HttpServer server;
         private CompletableFuture<String> authCodeFuture;
-        private String provider;
         private int port;
 
         public OAuthCallbackServer(String provider, int port) {
-            this.provider = provider;
+            // provider parameter kept for potential future use
             this.port = port;
             this.authCodeFuture = new CompletableFuture<>();
         }

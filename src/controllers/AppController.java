@@ -90,12 +90,6 @@ public class AppController extends BaseController<ResumeAnalyzingContainer> {
         }
     }
 
-    private void onLogout() {
-        try { utils.Constants.Session.logout(); } catch (Throwable ignored) {}
-        view.updateAuthUIPublic();
-        view.showHome();
-    }
-
     public void openLogin() {
         var c = new LoginController(
                 new LoginFrame(),

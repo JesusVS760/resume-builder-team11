@@ -65,6 +65,9 @@ public class ExportService {
             if (content != null && !content.isEmpty()) {
                 // Remove carriage returns and other control characters
                 content = content.replace("\r", "").replace("\t", "    ");
+                
+                // Sanitize content - replace special Unicode characters not supported by Helvetica
+                content = sanitizeForPdf(content);
 
                 String[] lines = content.split("\n");
                 for (String line : lines) {
@@ -240,6 +243,80 @@ public class ExportService {
             // Fallback: try to read as plain text
             return new String(Files.readAllBytes(Paths.get(filePath)));
         }
+    }
+
+    /**
+     * Sanitizes text content for PDF export by replacing/removing characters
+     * not supported by the Helvetica font
+     */
+    private String sanitizeForPdf(String content) {
+        if (content == null) return "";
+        
+        // Replace box-drawing characters
+        content = content.replace("\u2550", "=");  // ═ double horizontal
+        content = content.replace("\u2551", "|");  // ║ double vertical
+        content = content.replace("\u2554", "+");  // ╔ double down and right
+        content = content.replace("\u2557", "+");  // ╗ double down and left
+        content = content.replace("\u255A", "+");  // ╚ double up and right
+        content = content.replace("\u255D", "+");  // ╝ double up and left
+        content = content.replace("\u2560", "+");  // ╠ double vertical and right
+        content = content.replace("\u2563", "+");  // ╣ double vertical and left
+        content = content.replace("\u2566", "+");  // ╦ double down and horizontal
+        content = content.replace("\u2569", "+");  // ╩ double up and horizontal
+        content = content.replace("\u256C", "+");  // ╬ double vertical and horizontal
+        content = content.replace("\u2500", "-");  // ─ light horizontal
+        content = content.replace("\u2502", "|");  // │ light vertical
+        
+        // Replace bullet points and squares
+        content = content.replace("\u25A0", "*");  // ■ black square
+        content = content.replace("\u25AA", "*");  // ▪ small black square
+        content = content.replace("\u25CF", "*");  // ● black circle
+        content = content.replace("\u2022", "*");  // • bullet
+        content = content.replace("\u25E6", "o");  // ◦ white bullet
+        content = content.replace("\u25B8", ">");  // ▸ right arrow
+        content = content.replace("\u25BA", ">");  // ► right pointer
+        content = content.replace("\u25C6", "*");  // ◆ black diamond
+        content = content.replace("\u2756", "*");  // ❖ diamond minus
+        
+        // Replace arrows
+        content = content.replace("\u2192", "->");  // → right arrow
+        content = content.replace("\u2190", "<-");  // ← left arrow
+        content = content.replace("\u2191", "^");   // ↑ up arrow
+        content = content.replace("\u2193", "v");   // ↓ down arrow
+        
+        // Replace dashes and quotes
+        content = content.replace("\u2013", "-");   // – en dash
+        content = content.replace("\u2014", "--");  // — em dash
+        content = content.replace("\u2018", "'");   // ' left single quote
+        content = content.replace("\u2019", "'");   // ' right single quote
+        content = content.replace("\u201C", "\"");  // " left double quote
+        content = content.replace("\u201D", "\"");  // " right double quote
+        content = content.replace("\u2026", "..."); // … ellipsis
+        
+        // Replace other common symbols
+        content = content.replace("\u00A9", "(c)");  // © copyright
+        content = content.replace("\u00AE", "(R)");  // ® registered
+        content = content.replace("\u2122", "(TM)"); // ™ trademark
+        content = content.replace("\u00B0", " deg"); // ° degree
+        content = content.replace("\u00B7", "*");    // · middle dot
+        content = content.replace("\u2023", ">");    // ‣ triangular bullet
+        content = content.replace("\u2043", "-");    // ⁃ hyphen bullet
+        
+        // Replace checkmarks and crosses
+        content = content.replace("\u2713", "[x]");  // ✓ check mark
+        content = content.replace("\u2714", "[x]");  // ✔ heavy check mark
+        content = content.replace("\u2715", "[X]");  // ✕ multiplication x
+        content = content.replace("\u2717", "[X]");  // ✗ ballot x
+        content = content.replace("\u2718", "[X]");  // ✘ heavy ballot x
+        
+        // Replace stars
+        content = content.replace("\u2605", "*");    // ★ black star
+        content = content.replace("\u2606", "*");    // ☆ white star
+        
+        // Remove any remaining non-ASCII characters that Helvetica can't handle
+        content = content.replaceAll("[^\\x00-\\x7F]", "");
+        
+        return content;
     }
 
     /**

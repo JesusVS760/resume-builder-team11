@@ -2,8 +2,6 @@ package dao;
 
 import models.User;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class UserDAO {
     private DatabaseConnection dbConnection;

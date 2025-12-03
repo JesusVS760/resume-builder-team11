@@ -1,9 +1,6 @@
 package controllers;
 
-
-import javax.swing.*;
-import java.awt.*;
-
+import java.awt.Window;
 
 public abstract class BaseController<V> {
     protected final V view;

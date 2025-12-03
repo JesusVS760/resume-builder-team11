@@ -161,7 +161,9 @@ public class TwilioService {
 
     private String generateVerificationCode() {
         Random random = new Random();
-        int code = 100000 + random.nextInt(900000);  // Generate number between 100000-999999
+        int min = (int) Math.pow(10, CODE_LENGTH - 1);  // 100000 for 6 digits
+        int max = (int) Math.pow(10, CODE_LENGTH) - min;  // 900000 for 6 digits
+        int code = min + random.nextInt(max);
         return String.valueOf(code);
     }
 

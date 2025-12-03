@@ -161,6 +161,7 @@ public class UploadPanel extends JPanel {
             @Override public void dragExit(DropTargetEvent dte) {
                 dropArea.setHover(false); dropArea.repaint();
             }
+            @SuppressWarnings("unchecked")
             @Override public void drop(DropTargetDropEvent dtde) {
                 dropArea.setHover(false);
                 if (!accepts(dtde)) { dtde.rejectDrop(); return; }
@@ -308,7 +309,6 @@ public class UploadPanel extends JPanel {
         } else {
             // Fallback to old parsing logic
             String[] lines = result.split("\n");
-            boolean inResumeSection = false;
             boolean foundFirstResumeHeader = false;
 
             for (String line : lines) {
@@ -328,7 +328,6 @@ public class UploadPanel extends JPanel {
                         trimmed.startsWith("Summary:") ||
                         trimmed.startsWith("Comments:")) {
                     feedback.append(line).append("\n");
-                    inResumeSection = false;
                     continue;
                 }
 
@@ -338,7 +337,6 @@ public class UploadPanel extends JPanel {
                             !trimmed.contains(":") && !trimmed.contains("★")) ||
                             (trimmed.matches("^[A-Z\\s]{3,}$") && trimmed.length() > 2)) {
                         foundFirstResumeHeader = true;
-                        inResumeSection = true;
                     }
                 }
 

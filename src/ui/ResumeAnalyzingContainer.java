@@ -46,11 +46,6 @@ public class ResumeAnalyzingContainer extends JFrame {
     // Map card key -> button (for sticky/active state)
     private Map<String, HoverScaleButton> navButtons;
 
-    // Profile UI bits (used inside the PROFILE card)
-    private JLabel emailValueLabel;
-    private JLabel nameValueLabel;
-    private JButton logoutButton;
-
     // Reference to inner UploadPanel for controllers
     private UploadPanel uploadPanel;
 

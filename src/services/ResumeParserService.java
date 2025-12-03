@@ -17,7 +17,6 @@ import java.util.regex.*;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
@@ -103,8 +102,7 @@ public class ResumeParserService {
 
     private String extractDOCX(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file);
-             XWPFDocument doc = new XWPFDocument(fis);
-             XWPFWordExtractor extractor = new XWPFWordExtractor(doc)) {
+             XWPFDocument doc = new XWPFDocument(fis)) {
 
             StringBuilder sb = new StringBuilder();
             doc.getParagraphs().forEach(

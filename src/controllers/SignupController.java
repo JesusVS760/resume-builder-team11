@@ -52,11 +52,7 @@ public class SignupController extends BaseController<SignupFrame> {
             // initiateSignup returns a verification TOKEN, not a boolean
             String token = authService.initiateSignup(email, pw, "");
             if (token != null && !token.isEmpty()) {
-                view.showInfo(
-                        "We sent a verification code to your email. Enter it on the next screen.",
-                        "Verification Required"
-                );
-
+                // Open verification frame - it will auto-send the code
                 VerificationFrame vf = new VerificationFrame(email, token);
                 new VerificationController(vf, authService, twilioService, () -> {
                     dispose();

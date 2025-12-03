@@ -4,7 +4,9 @@ import services.AuthService;
 import services.TwilioService;
 import ui.VerificationFrame;
 
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import java.awt.Color;
 
 public class VerificationController extends BaseController<VerificationFrame> {
     private final AuthService authService;
@@ -20,11 +22,51 @@ public class VerificationController extends BaseController<VerificationFrame> {
         this.twilioService = twilioService;
         this.onVerified = onVerified;
         attach();
+        
+        // Auto-send code if in auto-send mode (email already provided)
+        if (view.isAutoSendMode()) {
+            SwingUtilities.invokeLater(this::autoSendCode);
+        }
     }
 
     private void attach() {
         view.setOnSendCode(e -> doSendCode());
         view.setOnVerifyCode(e -> doVerify());
+    }
+    
+    private void autoSendCode() {
+        final String email = safe(view.getEmail());
+        if (email.isEmpty()) {
+            return;
+        }
+
+        view.setStatusText("Sending verification code...");
+        view.setInputsEnabled(false);
+        
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                twilioService.sendVerificationCode(email);
+                return true;
+            }
+
+            @Override
+            protected void done() {
+                view.setInputsEnabled(true);
+                try {
+                    if (get()) {
+                        view.setStatusText("Verification code sent!");
+                        view.setStatusColor(new Color(0, 180, 0)); // Green
+                    } else {
+                        view.setStatusText("Failed to send code. Try again.");
+                        view.setStatusColor(Color.RED);
+                    }
+                } catch (Exception ex) {
+                    view.setStatusText("Failed: " + ex.getMessage());
+                    view.setStatusColor(Color.RED);
+                }
+            }
+        }.execute();
     }
 
     private void doSendCode() {

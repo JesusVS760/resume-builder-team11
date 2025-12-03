@@ -173,7 +173,7 @@ public class ResumeAnalyzingContainer extends JFrame {
         rootPanel.add(navigationPanel, BorderLayout.WEST);
 
         resumeBuilderButton = new HoverScaleButton("Home");
-        buildResumeButton   = new HoverScaleButton("Build Resume");
+        buildResumeButton   = new HoverScaleButton("Analyze Resume");
         savedResumesButton  = new HoverScaleButton("Saved Resumes");
         profileButton       = new HoverScaleButton("Login");
 

@@ -50,7 +50,7 @@ public class ResumeAnalyzingContainer extends JFrame {
     private UploadPanel uploadPanel;
 
     public ResumeAnalyzingContainer() {
-        super("Resume Builder");
+        super("Resume Analyzer");
 
         initLookAndFeel();
         buildUI();

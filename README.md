@@ -1,5 +1,7 @@
 # Tailored Resume Builder
 
+AI used to help develop certain functions
+
 ```
 TailoredResumeBuilder/
 ├── build/                     # Compiled .class files (generates the folder with the .class files in it locally when running)

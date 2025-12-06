@@ -8,10 +8,18 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import java.awt.Color;
 
+/*
+     Controller for the verification window.
+     Handles sending a verification code (via Twilio) and completing signup
+     after the user enters the correct code.
+*/
 public class VerificationController extends BaseController<VerificationFrame> {
+    // Service used to complete signup in the backend
     private final AuthService authService;
+    // Service used to send and verify codes (e.g., email/SMS via Twilio)
     private final TwilioService twilioService;
-    private final Runnable onVerified; // e.g., open Login
+    // Callback to run after successful verification (e.g., return to Login)
+    private final Runnable onVerified;
 
     public VerificationController(VerificationFrame view,
                                   AuthService authService,
@@ -22,18 +30,23 @@ public class VerificationController extends BaseController<VerificationFrame> {
         this.twilioService = twilioService;
         this.onVerified = onVerified;
         attach();
-        
+
         // Auto-send code if in auto-send mode (email already provided)
         if (view.isAutoSendMode()) {
             SwingUtilities.invokeLater(this::autoSendCode);
         }
     }
 
+    // Wire up UI event handlers
     private void attach() {
         view.setOnSendCode(e -> doSendCode());
         view.setOnVerifyCode(e -> doVerify());
     }
-    
+
+    /*
+         Automatically send a verification code when the frame opens,
+         if the email is already known (auto-send mode).
+    */
     private void autoSendCode() {
         final String email = safe(view.getEmail());
         if (email.isEmpty()) {
@@ -42,7 +55,7 @@ public class VerificationController extends BaseController<VerificationFrame> {
 
         view.setStatusText("Sending verification code...");
         view.setInputsEnabled(false);
-        
+
         new SwingWorker<Boolean, Void>() {
             @Override
             protected Boolean doInBackground() throws Exception {
@@ -69,6 +82,9 @@ public class VerificationController extends BaseController<VerificationFrame> {
         }.execute();
     }
 
+    /*
+        Manually send a verification code when the user clicks "Send Code".
+    */
     private void doSendCode() {
         final String email = safe(view.getEmail());
         if (email.isEmpty()) {
@@ -100,6 +116,8 @@ public class VerificationController extends BaseController<VerificationFrame> {
         }.execute();
     }
 
+
+    // Verify the entered code and, if valid, complete the signup using the token.
     private void doVerify() {
         final String code = safe(view.getEnteredCode());
         if (!code.matches("^\\d{6}$")) {
@@ -121,8 +139,10 @@ public class VerificationController extends BaseController<VerificationFrame> {
         new SwingWorker<Boolean, Void>() {
             @Override
             protected Boolean doInBackground() throws Exception {
+                // First confirm the code with Twilio
                 boolean codeOk = twilioService.verifyCode(code);
                 if (!codeOk) return false;
+                // Then finalize the signup in the auth service
                 return authService.completeSignup(token);
             }
 
@@ -146,5 +166,6 @@ public class VerificationController extends BaseController<VerificationFrame> {
         }.execute();
     }
 
+    // Null-safe trim helper
     private static String safe(String s) { return s == null ? "" : s.trim(); }
 }

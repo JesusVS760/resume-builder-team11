@@ -16,37 +16,46 @@ import java.util.List;
 
 public class SavedResumesController extends BaseController<SavedResumesPanel> {
 
+    // Data access object for reading and writing resumes in the database
     private final ResumeDAO resumeDAO;
+
+    // Service responsible for exporting resumes (PDF / DOCX)
     private final ExportService exportService;
 
+    // Sorting options for the list
     private enum SortMode { DATE_DESC, NAME_ASC }
-    private SortMode sortMode = SortMode.DATE_DESC;
+    private SortMode sortMode = SortMode.DATE_DESC; // default sort
 
     public SavedResumesController(SavedResumesPanel view, ResumeDAO resumeDAO) {
         super(view);
         this.resumeDAO = resumeDAO;
         this.exportService = new ExportService();
 
-        attach();
-        reload();
+        attach(); // wire UI callbacks
+        reload(); // initial load of resumes
     }
 
+    // Wire up all the callbacks from the saved panel
     private void attach() {
         // Upload button: open file chooser and save to DB
         view.setOnUpload(this::handleUploadClicked);
 
+        // Sort by date
         view.setOnSortByDate(() -> {
             sortMode = SortMode.DATE_DESC;
             reload();
         });
 
+        // Sort by alphabet
         view.setOnSortByName(() -> {
             sortMode = SortMode.NAME_ASC;
             reload();
         });
 
+        // Edit selected resume
         view.setOnEdit(resume -> handleEdit(resume));
 
+        // Delete selected resume
         view.setOnDelete(resume -> {
             String userId = getCurrentUserId();
             if (userId == null || userId.isBlank()) {
@@ -90,10 +99,14 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
             }
         });
 
+        // Export as pdf
         view.setOnExportPdf(resume -> handleExportPdf(resume));
+
+        // Export as DOCX
         view.setOnExportDocx(resume -> handleExportDocx(resume));
     }
 
+    // Handle editing a saved resume
     private void handleEdit(Resume resume) {
         String userId = getCurrentUserId();
         if (userId == null || userId.isBlank()) {
@@ -142,9 +155,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         editFrame.setVisible(true);
     }
 
-    /**
-     * Saves edited content to the existing file (overwrites)
-     */
+    // Saves edited content to the existing file
     private boolean saveEditedContent(Resume resume, String content, String userId) {
         try {
             String originalPath = resume.getFilePath();
@@ -166,9 +177,8 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         }
     }
 
-    /**
-     * Saves edited content to an existing PDF file (overwrites)
-     */
+
+    //Saves edited content to an existing PDF file (overwrites)
     private boolean saveEditedPdfFile(String filePath, String content) {
         try {
             // Create PDF with the edited content using PDFBox
@@ -265,9 +275,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         }
     }
 
-    /**
-     * Helper method to wrap text at a specified width
-     */
+    // Helper method to wrap text at a specified width
     private String[] wrapText(String text, int width) {
         if (text.length() <= width) {
             return new String[]{text};
@@ -293,9 +301,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         return lines.toArray(new String[0]);
     }
 
-    /**
-     * Saves edited content to an existing DOCX file (overwrites)
-     */
+    //Saves edited content to an existing DOCX file (overwrites)
     private boolean saveEditedDocxFile(String filePath, String content) {
         try {
             // Create DOCX with the edited content
@@ -325,9 +331,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         }
     }
 
-    /**
-     * Gets the file extension from a path
-     */
+    // Gets the file extension from a path
     private String getFileExtension(String path) {
         if (path == null) return "";
         int lastDot = path.lastIndexOf('.');
@@ -508,10 +512,7 @@ public class SavedResumesController extends BaseController<SavedResumesPanel> {
         }
     }
 
-    /**
-     * Copies file into an "uploads" folder and inserts a row in `resumes`.
-     * Returns the new resume id.
-     */
+    //Copies file into an "uploads" folder and inserts a row in `resumes`.
     private int saveResumeFile(File originalFile, String userId) throws IOException, SQLException {
         Path uploadsDir = Paths.get("uploads");
         if (Files.notExists(uploadsDir)) {

@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Simple .env file loader for Java applications
+/** 
+ * Asked AI best way to load a .env file so we can use the environment variables in the code
  */
 public class DotEnvLoader {
     private static Map<String, String> envVars = new HashMap<>();

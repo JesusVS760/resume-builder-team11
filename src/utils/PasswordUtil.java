@@ -1,3 +1,4 @@
+// AI prompted on how to hash and verify passwords
 package utils;
 
 import java.security.MessageDigest;
